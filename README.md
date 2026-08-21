@@ -27,7 +27,7 @@ repositories {
 }
 
 dependencies {
-    implementation("com.github.MetrolistGroup.innertubex:innertubex:v0.1.1")
+    implementation("com.github.MetrolistGroup.innertubex:innertubex:v0.1.2")
 }
 ```
 

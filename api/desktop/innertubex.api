@@ -3,6 +3,7 @@ public final class com/metrolist/innertubex/InnerTube {
 	public synthetic fun <init> (Lio/ktor/client/HttpClient;Lkotlin/jvm/functions/Function2;Lcom/metrolist/innertubex/InnerTubeLogger;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
 	public final fun accountMenu (Lcom/metrolist/innertubex/models/YouTubeClient;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
 	public final fun accountsList (Lcom/metrolist/innertubex/models/YouTubeClient;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public final fun addPlaylistToPlaylist (Lcom/metrolist/innertubex/models/YouTubeClient;Ljava/lang/String;Ljava/lang/String;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
 	public final fun addToPlaylist (Lcom/metrolist/innertubex/models/YouTubeClient;Ljava/lang/String;Ljava/lang/String;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
 	public final fun browse (Lcom/metrolist/innertubex/models/YouTubeClient;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;ZLkotlin/coroutines/Continuation;)Ljava/lang/Object;
 	public static synthetic fun browse$default (Lcom/metrolist/innertubex/InnerTube;Lcom/metrolist/innertubex/models/YouTubeClient;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;ZLkotlin/coroutines/Continuation;ILjava/lang/Object;)Ljava/lang/Object;
@@ -11,6 +12,7 @@ public final class com/metrolist/innertubex/InnerTube {
 	public final fun createIsolatedSession (Z)Lcom/metrolist/innertubex/InnerTube;
 	public final fun createPlaylist (Lcom/metrolist/innertubex/models/YouTubeClient;Ljava/lang/String;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
 	public final fun deletePlaylist (Lcom/metrolist/innertubex/models/YouTubeClient;Ljava/lang/String;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public final fun deletePrivatelyOwnedEntity (Lcom/metrolist/innertubex/models/YouTubeClient;Ljava/lang/String;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
 	public final fun dislikeVideo (Lcom/metrolist/innertubex/models/YouTubeClient;Ljava/lang/String;Lcom/metrolist/innertubex/InnerTube$SessionSnapshot;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
 	public final fun dislikeVideo (Lcom/metrolist/innertubex/models/YouTubeClient;Ljava/lang/String;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
 	public final fun feedback (Lcom/metrolist/innertubex/models/YouTubeClient;Ljava/util/List;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
@@ -50,6 +52,7 @@ public final class com/metrolist/innertubex/InnerTube {
 	public final fun registerWatchtimeWithSession (Lcom/metrolist/innertubex/models/YouTubeClient;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;ZLjava/lang/Integer;Lcom/metrolist/innertubex/InnerTube$SessionSnapshot;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
 	public final fun removePlaylistSong (Lcom/metrolist/innertubex/models/YouTubeClient;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
 	public final fun removePlaylistSongs (Lcom/metrolist/innertubex/models/YouTubeClient;Ljava/lang/String;Ljava/util/List;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public final fun removePlaylistThumbnail (Lcom/metrolist/innertubex/models/YouTubeClient;Ljava/lang/String;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
 	public final fun renamePlaylist (Lcom/metrolist/innertubex/models/YouTubeClient;Ljava/lang/String;Ljava/lang/String;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
 	public final fun replaceSession (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Z)V
 	public final fun search (Lcom/metrolist/innertubex/models/YouTubeClient;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/Boolean;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
@@ -61,6 +64,7 @@ public final class com/metrolist/innertubex/InnerTube {
 	public final fun setDataSyncId (Ljava/lang/String;)V
 	public final fun setLocale (Lcom/metrolist/innertubex/models/YouTubeLocale;)V
 	public final fun setPlaylistDescription (Lcom/metrolist/innertubex/models/YouTubeClient;Ljava/lang/String;Ljava/lang/String;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public final fun setPlaylistThumbnail (Lcom/metrolist/innertubex/models/YouTubeClient;Ljava/lang/String;[BLkotlin/coroutines/Continuation;)Ljava/lang/Object;
 	public final fun setRegionOverrideActive (Z)V
 	public final fun setUseLoginForBrowse (Z)V
 	public final fun setVisitorData (Ljava/lang/String;)V
@@ -73,6 +77,7 @@ public final class com/metrolist/innertubex/InnerTube {
 	public static synthetic fun unsubscribeChannel$default (Lcom/metrolist/innertubex/InnerTube;Lcom/metrolist/innertubex/models/YouTubeClient;Ljava/lang/String;Ljava/lang/String;Lkotlin/coroutines/Continuation;ILjava/lang/Object;)Ljava/lang/Object;
 	public final fun uploadSong (Ljava/lang/String;JLkotlin/jvm/functions/Function0;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
 	public final fun uploadSong (Ljava/lang/String;[BLkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public final fun uploadSong (Ljava/lang/String;[BLkotlin/jvm/functions/Function1;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
 }
 
 public final class com/metrolist/innertubex/InnerTube$SessionSnapshot {

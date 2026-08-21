@@ -6,10 +6,23 @@ that `0.x` releases may contain breaking API changes.
 
 ## [Unreleased]
 
+## [0.1.2] - 2026-08-22
+
+### Added
+
+- Playlist custom thumbnail upload and removal.
+- Adding one playlist to another playlist.
+- Deleting privately owned library entities.
+- Optional progress reporting for in-memory song uploads.
+
 ### Fixed
 
 - Documented JitPack's variant-aware KMP coordinate instead of its aggregate
   repository POM coordinate.
+- Accept-Language headers no longer duplicate a region already present in the
+  language tag.
+- `accountsList` omits the active-account sync id so every signed-in account
+  can be enumerated.
 
 ## [0.1.1] - 2026-08-21
 

@@ -7,6 +7,7 @@ import com.metrolist.innertubex.models.body.AccountsListBody
 import com.metrolist.innertubex.models.body.Action
 import com.metrolist.innertubex.models.body.BrowseBody
 import com.metrolist.innertubex.models.body.CreatePlaylistBody
+import com.metrolist.innertubex.models.body.DeletePrivatelyOwnedEntityBody
 import com.metrolist.innertubex.models.body.EditPlaylistBody
 import com.metrolist.innertubex.models.body.FeedbackBody
 import com.metrolist.innertubex.models.body.GetQueueBody
@@ -18,10 +19,12 @@ import com.metrolist.innertubex.models.body.PlayerBody
 import com.metrolist.innertubex.models.body.PlaylistDeleteBody
 import com.metrolist.innertubex.models.body.SearchBody
 import com.metrolist.innertubex.models.body.SubscribeBody
+import com.metrolist.innertubex.models.response.ImageUploadResponse
 import com.metrolist.innertubex.utils.parseCookieString
 import com.metrolist.innertubex.utils.sanitizeCookieString
 import com.metrolist.innertubex.utils.sha1
 import io.ktor.client.HttpClient
+import io.ktor.client.plugins.onUpload
 import io.ktor.client.plugins.timeout
 import io.ktor.client.request.HttpRequestBuilder
 import io.ktor.client.request.forms.FormDataContent
@@ -113,6 +116,7 @@ class InnerTube(
             )
         private val VISITOR_DATA_REGEX = Regex(""""(?:VISITOR_DATA|visitorData)"\s*:\s*"([^"]+)"""")
         private const val MAX_UPLOAD_START_RESPONSE_BYTES = 64 * 1024
+        private const val MAX_IMAGE_UPLOAD_RESPONSE_BYTES = 64 * 1024
         private const val MAX_UPLOAD_BYTES = 300L * 1024 * 1024
         private const val MAX_VISITOR_RESPONSE_BYTES = 4 * 1024 * 1024
     }
@@ -331,6 +335,12 @@ class InnerTube(
 
     private fun sanitizeAuthUser(value: String): String = value.filter { it.isDigit() }.ifBlank { "0" }
 
+    private fun YouTubeLocale.acceptLanguageHeader(): String {
+        val languageTag = hl.replace('_', '-')
+        val regionalTag = if ('-' in languageTag) languageTag else "$languageTag-$gl"
+        return "$regionalTag,${languageTag.substringBefore('-')};q=0.9"
+    }
+
     private fun resolveSapisidValue(cookie: String?): String? {
         val cookieMap = cookie?.let(::parseCookieString).orEmpty()
         return cookieMap["SAPISID"]
@@ -363,7 +373,7 @@ class InnerTube(
             append("X-Origin", ORIGIN_MUSIC)
             append("Referer", REFERER_MUSIC)
             append("X-Goog-AuthUser", session.authUser)
-            append("Accept-Language", "${session.locale.hl}-${session.locale.gl},${session.locale.hl};q=0.9")
+            append("Accept-Language", session.locale.acceptLanguageHeader())
             session.visitorData?.let { append("X-Goog-Visitor-Id", it) }
             val effectiveCookie = injectPrefCookie(session.cookie, session.locale.hl, session.locale.gl)
             append(HttpHeaders.Cookie, effectiveCookie)
@@ -413,7 +423,7 @@ class InnerTube(
             append("Referer", requestReferer)
             append(
                 "Accept-Language",
-                "${session.locale.hl}-${session.locale.gl},${session.locale.hl};q=0.9",
+                session.locale.acceptLanguageHeader(),
             )
             visitorData?.let { append("X-Goog-Visitor-Id", it) }
             if (client.loginSupported && includeAccountCookies) {
@@ -816,7 +826,7 @@ class InnerTube(
                         append("Referer", if (client.clientName == "WEB_REMIX") REFERER_MUSIC else REFERER_WWW)
                         append(
                             "Accept-Language",
-                            "${requestSession.locale.hl}-${requestSession.locale.gl},${requestSession.locale.hl};q=0.9",
+                            requestSession.locale.acceptLanguageHeader(),
                         )
                         append("Cache-Control", "no-cache")
                         append("Content-Type", "application/json")
@@ -1038,7 +1048,7 @@ class InnerTube(
                 ytClient(client, requestSession, setLogin = true)
                 setBody(
                     AccountsListBody(
-                        context = client.toContext(requestSession.locale, requestSession.visitorData, requestSession.dataSyncId),
+                        context = client.toContext(requestSession.locale, requestSession.visitorData, null),
                     ),
                 )
             }
@@ -1050,10 +1060,23 @@ class InnerTube(
         bytes: ByteArray,
     ): HttpResponse = uploadSong(fileName, bytes.size.toLong()) { ByteReadChannel(bytes) }
 
+    suspend fun uploadSong(
+        fileName: String,
+        bytes: ByteArray,
+        onProgress: ((Float) -> Unit)?,
+    ): HttpResponse = uploadSong(fileName, bytes.size.toLong(), onProgress) { ByteReadChannel(bytes) }
+
     /** Streams a known-length song upload without materializing the file in library memory. */
     suspend fun uploadSong(
         fileName: String,
         contentLength: Long,
+        content: () -> ByteReadChannel,
+    ): HttpResponse = uploadSong(fileName, contentLength, null, content)
+
+    private suspend fun uploadSong(
+        fileName: String,
+        contentLength: Long,
+        onProgress: ((Float) -> Unit)?,
         content: () -> ByteReadChannel,
     ): HttpResponse {
         require(contentLength > 0L) { "Upload content must not be empty" }
@@ -1091,6 +1114,10 @@ class InnerTube(
                     uploadAuthHeaders(requestSession)
                     header("X-Goog-Upload-Command", "upload, finalize")
                     header("X-Goog-Upload-Offset", "0")
+                    onUpload { bytesSentTotal, requestContentLength ->
+                        val total = requestContentLength ?: contentLength
+                        if (total > 0L) onProgress?.invoke(bytesSentTotal.toFloat() / total.toFloat())
+                    }
                     setBody(
                         object : OutgoingContent.ReadChannelContent() {
                             override val contentLength: Long = contentLength
@@ -1267,7 +1294,24 @@ class InnerTube(
                 EditPlaylistBody(
                     client.toContext(requestSession.locale, requestSession.visitorData, requestSession.dataSyncId),
                     playlistId.removePrefix("VL"),
-                    listOf(Action.AddVideoAction(addedVideoId = videoId)),
+                    listOf(Action.addVideoAction(addedVideoId = videoId)),
+                ),
+            )
+        }
+    }
+
+    suspend fun addPlaylistToPlaylist(
+        client: YouTubeClient,
+        playlistId: String,
+        addedPlaylistId: String,
+    ) = executeMutation("addPlaylistToPlaylist") { requestSession ->
+        httpClient.post("browse/edit_playlist") {
+            ytClient(client, requestSession, setLogin = true)
+            setBody(
+                EditPlaylistBody(
+                    client.toContext(requestSession.locale, requestSession.visitorData, requestSession.dataSyncId),
+                    playlistId.removePrefix("VL"),
+                    listOf(Action.addPlaylistAction(addedPlaylistId.removePrefix("VL"))),
                 ),
             )
         }
@@ -1285,7 +1329,7 @@ class InnerTube(
                 EditPlaylistBody(
                     client.toContext(requestSession.locale, requestSession.visitorData, requestSession.dataSyncId),
                     playlistId.removePrefix("VL"),
-                    listOf(Action.MoveVideoAction(setVideoId = setVideoId, movedSetVideoIdSuccessor = successorSetVideoId)),
+                    listOf(Action.moveVideoAction(setVideoId = setVideoId, movedSetVideoIdSuccessor = successorSetVideoId)),
                 ),
             )
         }
@@ -1303,7 +1347,7 @@ class InnerTube(
                 EditPlaylistBody(
                     client.toContext(requestSession.locale, requestSession.visitorData, requestSession.dataSyncId),
                     playlistId.removePrefix("VL"),
-                    listOf(Action.RemoveVideoAction(setVideoId = setVideoId, removedVideoId = videoId)),
+                    listOf(Action.removeVideoAction(setVideoId = setVideoId, removedVideoId = videoId)),
                 ),
             )
         }
@@ -1320,7 +1364,7 @@ class InnerTube(
                 EditPlaylistBody(
                     client.toContext(requestSession.locale, requestSession.visitorData, requestSession.dataSyncId),
                     playlistId.removePrefix("VL"),
-                    songs.map { (setVideoId, videoId) -> Action.RemoveVideoAction(setVideoId, videoId) },
+                    songs.map { (setVideoId, videoId) -> Action.removeVideoAction(setVideoId, videoId) },
                 ),
             )
         }
@@ -1353,7 +1397,7 @@ class InnerTube(
                 EditPlaylistBody(
                     client.toContext(requestSession.locale, requestSession.visitorData, requestSession.dataSyncId),
                     playlistId.removePrefix("VL"),
-                    listOf(Action.RenamePlaylistAction(title)),
+                    listOf(Action.renamePlaylistAction(title)),
                 ),
             )
         }
@@ -1370,7 +1414,77 @@ class InnerTube(
                 EditPlaylistBody(
                     client.toContext(requestSession.locale, requestSession.visitorData, requestSession.dataSyncId),
                     playlistId.removePrefix("VL"),
-                    listOf(Action.SetPlaylistDescriptionAction(description)),
+                    listOf(Action.setPlaylistDescriptionAction(description)),
+                ),
+            )
+        }
+    }
+
+    suspend fun setPlaylistThumbnail(
+        client: YouTubeClient,
+        playlistId: String,
+        image: ByteArray,
+    ): HttpResponse {
+        require(image.isNotEmpty()) { "Playlist thumbnail must not be empty" }
+        val requestSession = sessionSnapshot()
+        val startResponse =
+            executeMutation("setPlaylistThumbnail:start", requestSession) { session ->
+                httpClient.post("https://music.youtube.com/playlist_image_upload/playlist_custom_thumbnail") {
+                    ytClient(client, session, setLogin = true)
+                    header("X-Goog-Upload-Command", "start")
+                    header("X-Goog-Upload-Protocol", "resumable")
+                    header("X-Goog-Upload-Header-Content-Length", image.size.toString())
+                }
+            }
+        val uploadId = startResponse.headers["X-Goog-Upload-Id"] ?: startResponse.headers["X-Guploader-Uploadid"]
+        startResponse.bodyAsTextLimited(MAX_UPLOAD_START_RESPONSE_BYTES)
+        check(startResponse.status.isSuccess()) {
+            "Playlist thumbnail upload session start failed with HTTP ${startResponse.status.value}"
+        }
+        check(!uploadId.isNullOrBlank()) { "Missing playlist thumbnail upload ID" }
+
+        val uploadResponse =
+            executeMutation("setPlaylistThumbnail:upload", requestSession) { session ->
+                httpClient.post("https://music.youtube.com/playlist_image_upload/playlist_custom_thumbnail") {
+                    ytClient(client, session, setLogin = true)
+                    parameter("upload_id", uploadId)
+                    parameter("upload_protocol", "resumable")
+                    header("X-Goog-Upload-Command", "upload, finalize")
+                    header("X-Goog-Upload-Offset", "0")
+                    setBody(image)
+                }
+            }
+        val uploadBody = uploadResponse.bodyAsTextLimited(MAX_IMAGE_UPLOAD_RESPONSE_BYTES)
+        check(uploadResponse.status.isSuccess()) {
+            "Playlist thumbnail upload failed with HTTP ${uploadResponse.status.value}"
+        }
+        val encryptedBlobId = Json.decodeFromString<ImageUploadResponse>(uploadBody).encryptedBlobId
+
+        return executeMutation("setPlaylistThumbnail:apply", requestSession) { session ->
+            httpClient.post("browse/edit_playlist") {
+                ytClient(client, session, setLogin = true)
+                setBody(
+                    EditPlaylistBody(
+                        client.toContext(session.locale, session.visitorData, session.dataSyncId),
+                        playlistId.removePrefix("VL"),
+                        listOf(Action.setCustomThumbnailAction(encryptedBlobId)),
+                    ),
+                )
+            }
+        }
+    }
+
+    suspend fun removePlaylistThumbnail(
+        client: YouTubeClient,
+        playlistId: String,
+    ) = executeMutation("removePlaylistThumbnail") { requestSession ->
+        httpClient.post("browse/edit_playlist") {
+            ytClient(client, requestSession, setLogin = true)
+            setBody(
+                EditPlaylistBody(
+                    client.toContext(requestSession.locale, requestSession.visitorData, requestSession.dataSyncId),
+                    playlistId.removePrefix("VL"),
+                    listOf(Action.removeCustomThumbnailAction()),
                 ),
             )
         }
@@ -1391,6 +1505,21 @@ class InnerTube(
                             requestSession.dataSyncId,
                         ),
                     playlistId = playlistId.removePrefix("VL"),
+                ),
+            )
+        }
+    }
+
+    suspend fun deletePrivatelyOwnedEntity(
+        client: YouTubeClient,
+        entityId: String,
+    ) = executeMutation("deletePrivatelyOwnedEntity") { requestSession ->
+        httpClient.post("music/delete_privately_owned_entity") {
+            ytClient(client, requestSession, setLogin = true)
+            setBody(
+                DeletePrivatelyOwnedEntityBody(
+                    context = client.toContext(requestSession.locale, requestSession.visitorData, requestSession.dataSyncId),
+                    entityId = entityId,
                 ),
             )
         }
@@ -1451,7 +1580,7 @@ class InnerTube(
                                 header(HttpHeaders.Accept, "application/json,text/plain,*/*")
                                 header(
                                     HttpHeaders.AcceptLanguage,
-                                    "${requestSession.locale.hl}-${requestSession.locale.gl},${requestSession.locale.hl};q=0.9",
+                                    requestSession.locale.acceptLanguageHeader(),
                                 )
                             }
                         }
@@ -1494,7 +1623,7 @@ class InnerTube(
                     header(HttpHeaders.Accept, "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8")
                     header(
                         HttpHeaders.AcceptLanguage,
-                        "${requestSession.locale.hl}-${requestSession.locale.gl},${requestSession.locale.hl};q=0.9",
+                        requestSession.locale.acceptLanguageHeader(),
                     )
                 }
             }

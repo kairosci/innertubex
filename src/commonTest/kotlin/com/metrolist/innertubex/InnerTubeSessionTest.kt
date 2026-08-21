@@ -1,6 +1,7 @@
 package com.metrolist.innertubex
 
 import com.metrolist.innertubex.models.YouTubeClient
+import com.metrolist.innertubex.models.YouTubeLocale
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.mock.MockEngine
 import io.ktor.client.engine.mock.respond
@@ -447,6 +448,63 @@ class InnerTubeSessionTest {
         }
 
     @Test
+    fun playlistThumbnailUploadAppliesEncryptedBlob() =
+        runBlocking {
+            var requests = 0
+            val engine =
+                MockEngine { request ->
+                    requests++
+                    when (requests) {
+                        1 -> {
+                            respond(
+                                content = "",
+                                status = HttpStatusCode.OK,
+                                headers = headersOf("X-Guploader-Uploadid", "upload-id"),
+                            )
+                        }
+
+                        2 -> {
+                            assertEquals("upload-id", request.url.parameters["upload_id"])
+                            respond("{\"encryptedBlobId\":\"blob-id\"}", HttpStatusCode.OK)
+                        }
+
+                        else -> {
+                            val body = (request.body as io.ktor.http.content.TextContent).text
+                            assertTrue(body.contains("ACTION_SET_CUSTOM_THUMBNAIL"))
+                            assertTrue(body.contains("blob-id"))
+                            respondOk()
+                        }
+                    }
+                }
+            val innerTube = clientWithContentNegotiation(engine).also { it.cookie = "SAPISID=secret" }
+
+            val response = innerTube.setPlaylistThumbnail(YouTubeClient.WEB_REMIX, "VLPL123", byteArrayOf(1, 2, 3))
+
+            assertEquals(HttpStatusCode.OK, response.status)
+            assertEquals(3, requests)
+            assertTrue(engine.requestHistory.all { it.headers[HttpHeaders.Authorization]?.startsWith("SAPISIDHASH ") == true })
+        }
+
+    @Test
+    fun playlistAndUploadedEntityMutationsUseExpectedPayloads() =
+        runBlocking {
+            val engine = MockEngine { respondOk() }
+            val innerTube = clientWithContentNegotiation(engine).also { it.cookie = "SAPISID=secret" }
+
+            innerTube.addPlaylistToPlaylist(YouTubeClient.WEB_REMIX, "VLPL123", "VLPL456")
+            innerTube.deletePrivatelyOwnedEntity(YouTubeClient.WEB_REMIX, "entity-id")
+
+            assertEquals(2, engine.requestHistory.size)
+            val addBody = (engine.requestHistory[0].body as io.ktor.http.content.TextContent).text
+            assertTrue(addBody.contains("ACTION_ADD_PLAYLIST"))
+            assertTrue(addBody.contains("\"playlistId\":\"PL123\""))
+            assertTrue(addBody.contains("\"addedFullListId\":\"PL456\""))
+            val deleteBody = (engine.requestHistory[1].body as io.ktor.http.content.TextContent).text
+            assertTrue(deleteBody.contains("\"entityId\":\"entity-id\""))
+            assertTrue(engine.requestHistory.all { it.headers[HttpHeaders.Authorization]?.startsWith("SAPISIDHASH ") == true })
+        }
+
+    @Test
     fun anonymousBrowsePolicySuppressesAccountCredentials() =
         runBlocking {
             val engine = MockEngine { respondOk() }
@@ -500,6 +558,31 @@ class InnerTubeSessionTest {
         }
 
     @Test
+    fun accountsListUsesWwwWithoutActiveAccountBinding() =
+        runBlocking {
+            val engine = MockEngine { respondOk() }
+            val innerTube =
+                clientWithContentNegotiation(engine).also {
+                    it.replaceSession(
+                        cookie = "SAPISID=account-secret",
+                        visitorData = "visitor-data",
+                        dataSyncId = "active-account",
+                        authUser = "1",
+                        useLoginForBrowse = true,
+                    )
+                }
+
+            innerTube.accountsList(YouTubeClient.WEB)
+
+            val request = engine.requestHistory.single()
+            assertEquals("www.youtube.com", request.url.host)
+            assertEquals("/youtubei/v1/account/accounts_list", request.url.encodedPath)
+            assertEquals("1", request.headers["X-Goog-AuthUser"])
+            val body = (request.body as io.ktor.http.content.TextContent).text
+            assertFalse(body.contains("active-account"))
+        }
+
+    @Test
     fun browseSendsVisitorDataWhenRegionOverrideInactive() =
         runBlocking {
             val engine = MockEngine { respondOk() }
@@ -511,6 +594,28 @@ class InnerTubeSessionTest {
             assertEquals("visitor-data", request.headers["X-Goog-Visitor-Id"])
             val body = (request.body as io.ktor.http.content.TextContent).text
             assertTrue(body.contains("\"visitorData\":\"visitor-data\""))
+        }
+
+    @Test
+    fun requestLanguageHeaderDoesNotDuplicateExistingRegion() =
+        runBlocking {
+            val engine = MockEngine { respondOk() }
+            val innerTube = clientWithContentNegotiation(engine).also { it.locale = YouTubeLocale(gl = "GB", hl = "en-GB") }
+
+            innerTube.browse(YouTubeClient.WEB_REMIX, browseId = "FEmusic_home")
+
+            assertEquals("en-GB,en;q=0.9", engine.requestHistory.single().headers[HttpHeaders.AcceptLanguage])
+        }
+
+    @Test
+    fun requestLanguageHeaderAddsConfiguredRegionToBareLanguage() =
+        runBlocking {
+            val engine = MockEngine { respondOk() }
+            val innerTube = clientWithContentNegotiation(engine).also { it.locale = YouTubeLocale(gl = "PL", hl = "pl") }
+
+            innerTube.browse(YouTubeClient.WEB_REMIX, browseId = "FEmusic_home")
+
+            assertEquals("pl-PL,pl;q=0.9", engine.requestHistory.single().headers[HttpHeaders.AcceptLanguage])
         }
 
     @Test

@@ -14,13 +14,19 @@ internal data class EditPlaylistBody(
 )
 
 internal object Action {
-    fun AddVideoAction(addedVideoId: String): JsonObject =
+    fun addVideoAction(addedVideoId: String): JsonObject =
         buildJsonObject {
             put("action", "ACTION_ADD_VIDEO")
             put("addedVideoId", addedVideoId)
         }
 
-    fun MoveVideoAction(
+    fun addPlaylistAction(addedFullListId: String): JsonObject =
+        buildJsonObject {
+            put("action", "ACTION_ADD_PLAYLIST")
+            put("addedFullListId", addedFullListId)
+        }
+
+    fun moveVideoAction(
         setVideoId: String,
         movedSetVideoIdSuccessor: String?,
     ): JsonObject =
@@ -30,7 +36,7 @@ internal object Action {
             put("movedSetVideoIdSuccessor", movedSetVideoIdSuccessor)
         }
 
-    fun RemoveVideoAction(
+    fun removeVideoAction(
         setVideoId: String,
         removedVideoId: String,
     ): JsonObject =
@@ -40,15 +46,31 @@ internal object Action {
             put("removedVideoId", removedVideoId)
         }
 
-    fun RenamePlaylistAction(playlistName: String): JsonObject =
+    fun renamePlaylistAction(playlistName: String): JsonObject =
         buildJsonObject {
             put("action", "ACTION_SET_PLAYLIST_NAME")
             put("playlistName", playlistName)
         }
 
-    fun SetPlaylistDescriptionAction(playlistDescription: String): JsonObject =
+    fun setPlaylistDescriptionAction(playlistDescription: String): JsonObject =
         buildJsonObject {
             put("action", "ACTION_SET_PLAYLIST_DESCRIPTION")
             put("playlistDescription", playlistDescription)
+        }
+
+    fun setCustomThumbnailAction(encryptedBlobId: String): JsonObject =
+        buildJsonObject {
+            put("action", "ACTION_SET_CUSTOM_THUMBNAIL")
+            put(
+                "addedCustomThumbnail",
+                buildJsonObject {
+                    put("playlistScottyEncryptedBlobId", encryptedBlobId)
+                },
+            )
+        }
+
+    fun removeCustomThumbnailAction(): JsonObject =
+        buildJsonObject {
+            put("action", "ACTION_REMOVE_CUSTOM_THUMBNAIL")
         }
 }
