@@ -6,6 +6,13 @@ that `0.x` releases may contain breaking API changes.
 
 ## [Unreleased]
 
+## [0.1.1] - 2026-08-21
+
+### Fixed
+
+- Preserved the generated binary API baseline format so clean CI and JitPack
+  builds pass. The failed `v0.1.0` JitPack lookup did not publish artifacts.
+
 ## [0.1.0] - 2026-08-21
 
 ### Added
