@@ -1,0 +1,71 @@
+package com.metrolist.innertubex.cipher
+
+import com.metrolist.innertubex.models.response.PlayerResponse
+import io.ktor.client.HttpClient
+import io.ktor.client.engine.mock.MockEngine
+import io.ktor.client.engine.mock.respond
+import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
+import io.ktor.http.ContentType
+import io.ktor.http.HttpHeaders
+import io.ktor.http.HttpStatusCode
+import io.ktor.http.headersOf
+import io.ktor.serialization.kotlinx.json.json
+import kotlinx.coroutines.runBlocking
+import kotlinx.serialization.json.Json
+import kotlin.test.Test
+import kotlin.test.assertEquals
+import kotlin.test.assertNull
+import kotlin.test.assertTrue
+
+class YouTubeCipherServiceTest {
+    @Test
+    fun processFormatsRejectsNFormatsWhenPlayerScriptUnavailable() =
+        runBlocking {
+            val httpClient =
+                HttpClient(
+                    MockEngine {
+                        respond(
+                            content = "not found",
+                            status = HttpStatusCode.NotFound,
+                            headers = headersOf(HttpHeaders.ContentType, ContentType.Text.Plain.toString()),
+                        )
+                    },
+                ) {
+                    install(ContentNegotiation) { json(Json { ignoreUnknownKeys = true }) }
+                }
+            val service = YouTubeCipherService(httpClient)
+            val format =
+                PlayerResponse.StreamingData.Format(
+                    itag = 140,
+                    url = "https://example.googlevideo.com/videoplayback?expire=1&n=Qabc12XYZ&signature=abc",
+                    mimeType = "audio/mp4",
+                )
+
+            val result =
+                service.processFormats(
+                    playerUrl = "https://www.youtube.com/s/player/66a6ea83/player_ias.vflset/en_GB/base.js",
+                    formats = listOf(format),
+                )
+
+            assertEquals(1, result.size)
+            assertNull(result.first().url)
+        }
+
+    @Test
+    fun processFormatsDoesNotFetchPlayerScriptsFromUntrustedHosts() =
+        runBlocking {
+            val engine = MockEngine { error("Untrusted player URL must not be requested") }
+            val service = YouTubeCipherService(HttpClient(engine))
+            val format =
+                PlayerResponse.StreamingData.Format(
+                    itag = 140,
+                    url = "https://example.googlevideo.com/videoplayback?n=challenge",
+                    mimeType = "audio/mp4",
+                )
+
+            val result = service.processFormats("https://example.com/s/player/hash/base.js", listOf(format))
+
+            assertNull(result.single().url)
+            assertTrue(engine.requestHistory.isEmpty())
+        }
+}

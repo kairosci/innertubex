@@ -1,0 +1,700 @@
+package com.metrolist.innertubex.sabr
+
+import io.ktor.client.HttpClient
+import io.ktor.client.engine.mock.MockEngine
+import io.ktor.client.engine.mock.respond
+import io.ktor.client.plugins.defaultRequest
+import io.ktor.client.request.header
+import io.ktor.http.HttpHeaders
+import io.ktor.http.HttpStatusCode
+import io.ktor.http.content.OutgoingContent
+import io.ktor.http.headersOf
+import io.ktor.utils.io.ByteChannel
+import io.ktor.utils.io.writeFully
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.async
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.collect
+import kotlinx.coroutines.flow.toList
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withTimeout
+import kotlin.test.Test
+import kotlin.test.assertContentEquals
+import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
+import kotlin.test.assertFalse
+import kotlin.test.assertNotNull
+
+@OptIn(ExperimentalSabrApi::class)
+class SabrAudioStreamTest {
+    @Test
+    fun videoStreamEmitsOnlySelectedVideoSegments() =
+        runBlocking {
+            val response =
+                umpPart(UmpPartType.FORMAT_INITIALIZATION_METADATA, initialization(0, itag = 248, lastModified = 300)) +
+                    mediaSegment(headerId = 1, itag = 140, lastModified = 100, isInit = true, data = byteArrayOf(1)) +
+                    mediaSegment(headerId = 2, itag = 248, lastModified = 300, isInit = true, data = byteArrayOf(2, 3)) +
+                    mediaSegment(headerId = 3, itag = 140, lastModified = 100, data = byteArrayOf(4)) +
+                    mediaSegment(headerId = 4, itag = 248, lastModified = 300, data = byteArrayOf(5, 6, 7)) +
+                    umpPart(UmpPartType.END_OF_TRACK, byteArrayOf())
+            val engine =
+                MockEngine {
+                    respond(
+                        content = response,
+                        status = HttpStatusCode.OK,
+                        headers = headersOf(HttpHeaders.ContentType, "application/vnd.yt-ump"),
+                    )
+                }
+            val bootstrap =
+                bootstrap().copy(
+                    selectedVideoFormat = SabrFormatId(248, 300),
+                    selectedVideoWidth = 1920,
+                    selectedVideoHeight = 1080,
+                    selectedVideoContentLengthBytes = 5,
+                    selectedVideoMimeType = "video/webm",
+                )
+
+            val chunks = SabrVideoStream(HttpClient(engine), bootstrap).bytes().toList()
+
+            assertEquals(2, chunks.size)
+            assertContentEquals(byteArrayOf(2, 3), chunks[0])
+            assertContentEquals(byteArrayOf(5, 6, 7), chunks[1])
+        }
+
+    @Test
+    fun emitsCompleteInitializationAndMediaSequence() =
+        runBlocking {
+            val response = completeResponse(endSegmentNumber = 0)
+            val engine =
+                MockEngine { request ->
+                    assertEquals("0", request.url.parameters["rn"])
+                    respond(
+                        content = response,
+                        status = HttpStatusCode.OK,
+                        headers = headersOf(HttpHeaders.ContentType, "application/vnd.yt-ump"),
+                    )
+                }
+
+            val chunks = SabrAudioStream(HttpClient(engine), bootstrap()).bytes().toList()
+
+            assertEquals(2, chunks.size)
+            assertContentEquals(byteArrayOf(1, 2, 3, 4), chunks[0])
+            assertContentEquals(byteArrayOf(5, 6, 7), chunks[1])
+        }
+
+    @Test
+    fun doesNotFollowHttpRedirects() =
+        runBlocking {
+            val engine =
+                MockEngine { request ->
+                    assertEquals("preserved", request.headers["X-Caller-Policy"])
+                    respond(
+                        content = "",
+                        status = HttpStatusCode.Found,
+                        headers = headersOf(HttpHeaders.Location, "https://example.com/steal-sabr"),
+                    )
+                }
+
+            assertFailsWith<SabrProtocolException> {
+                SabrAudioStream(
+                    HttpClient(engine) {
+                        defaultRequest { header("X-Caller-Policy", "preserved") }
+                    },
+                    bootstrap(),
+                ).bytes().toList()
+            }
+            assertEquals(1, engine.requestHistory.size)
+            Unit
+        }
+
+    @Test
+    fun rejectsCompletedStreamWithMissingBytes() =
+        runBlocking {
+            val engine =
+                MockEngine {
+                    respond(
+                        content = completeResponse(endSegmentNumber = 0),
+                        status = HttpStatusCode.OK,
+                        headers = headersOf(HttpHeaders.ContentType, "application/vnd.yt-ump"),
+                    )
+                }
+
+            assertFailsWith<SabrProtocolException> {
+                SabrAudioStream(
+                    HttpClient(engine),
+                    bootstrap().copy(contentLengthBytes = 8),
+                ).bytes().toList()
+            }
+            Unit
+        }
+
+    @Test
+    fun rejectsExcessRetainedContexts() =
+        runBlocking {
+            val response =
+                (1..65).fold(byteArrayOf()) { data, type ->
+                    data + umpPart(UmpPartType.SABR_CONTEXT_UPDATE, contextUpdate(type))
+                }
+            val engine =
+                MockEngine {
+                    respond(
+                        content = response,
+                        status = HttpStatusCode.OK,
+                        headers = headersOf(HttpHeaders.ContentType, "application/vnd.yt-ump"),
+                    )
+                }
+
+            assertFailsWith<SabrProtocolException> {
+                SabrAudioStream(HttpClient(engine), bootstrap()).bytes().toList()
+            }
+            Unit
+        }
+
+    @Test
+    fun emitsInitializationBeforeSabrResponseCompletes() =
+        runBlocking {
+            val releaseResponseTail = CompletableDeferred<Unit>()
+            val firstChunk = CompletableDeferred<ByteArray>()
+            val engine =
+                MockEngine {
+                    val channel = ByteChannel(autoFlush = true)
+                    launch {
+                        channel.writeFully(initializationResponsePrefix(endSegmentNumber = 0))
+                        releaseResponseTail.await()
+                        channel.writeFully(mediaResponseSuffix())
+                        channel.close()
+                    }
+                    respond(
+                        content = channel,
+                        status = HttpStatusCode.OK,
+                        headers = headersOf(HttpHeaders.ContentType, "application/vnd.yt-ump"),
+                    )
+                }
+            val chunks = mutableListOf<ByteArray>()
+            val collection =
+                async {
+                    SabrAudioStream(HttpClient(engine), bootstrap()).bytes().collect { chunk ->
+                        chunks += chunk
+                        if (!firstChunk.isCompleted) firstChunk.complete(chunk)
+                    }
+                }
+
+            assertContentEquals(byteArrayOf(1, 2, 3, 4), withTimeout(1_000) { firstChunk.await() })
+            assertFalse(collection.isCompleted)
+
+            releaseResponseTail.complete(Unit)
+            collection.await()
+            assertEquals(2, chunks.size)
+            assertContentEquals(byteArrayOf(5, 6, 7), chunks.last())
+        }
+
+    @Test
+    fun rejectsEndOfTrackBeforeInitializationMetadataEndSegment() =
+        runBlocking {
+            val engine =
+                MockEngine {
+                    respond(
+                        content = completeResponse(endSegmentNumber = 1),
+                        status = HttpStatusCode.OK,
+                        headers = headersOf(HttpHeaders.ContentType, "application/vnd.yt-ump"),
+                    )
+                }
+
+            assertFailsWith<SabrProtocolException> {
+                SabrAudioStream(HttpClient(engine), bootstrap()).bytes().toList()
+            }
+            Unit
+        }
+
+    @Test
+    fun retriesTransientSabrHttpFailureBeforePlaybackStarts() =
+        runBlocking {
+            var requests = 0
+            val engine =
+                MockEngine {
+                    requests++
+                    if (requests == 1) {
+                        respond("temporary", HttpStatusCode.ServiceUnavailable)
+                    } else {
+                        respond(
+                            content = completeResponse(endSegmentNumber = 0),
+                            status = HttpStatusCode.OK,
+                            headers = headersOf(HttpHeaders.ContentType, "application/vnd.yt-ump"),
+                        )
+                    }
+                }
+
+            val chunks =
+                SabrAudioStream(
+                    httpClient = HttpClient(engine),
+                    bootstrap = bootstrap(),
+                    requestRetryDelay = {},
+                ).bytes().toList()
+
+            assertEquals(2, requests)
+            assertEquals(2, chunks.size)
+        }
+
+    @Test
+    fun followupRequestUsesDownloadedBoundaryInsteadOfPlaybackPosition() =
+        runBlocking {
+            var requestCount = 0
+            var followupBody: ByteArray? = null
+            val engine =
+                MockEngine { request ->
+                    requestCount++
+                    val response =
+                        if (requestCount == 1) {
+                            initializationAndSegmentResponse(endSegmentNumber = 1)
+                        } else {
+                            followupBody = (request.body as OutgoingContent.ByteArrayContent).bytes()
+                            finalSegmentResponse()
+                        }
+                    respond(
+                        content = response,
+                        status = HttpStatusCode.OK,
+                        headers = headersOf(HttpHeaders.ContentType, "application/vnd.yt-ump"),
+                    )
+                }
+
+            val chunks =
+                SabrAudioStream(
+                    httpClient = HttpClient(engine),
+                    bootstrap = bootstrap().copy(durationMs = 2_000, contentLengthBytes = 10),
+                    playbackPositionMs = { 250 },
+                ).bytes().toList()
+
+            assertEquals(2, requestCount)
+            assertEquals(3, chunks.size)
+            assertEquals(1_000, decodePlayerTimeMs(followupBody ?: error("No follow-up request")))
+        }
+
+    @Test
+    fun waitsForPlaybackBeforeExceedingServerReadaheadTarget() =
+        runBlocking {
+            val requestCount = MutableStateFlow(0)
+            val playbackPositionMs = MutableStateFlow(0L)
+            val firstRequestHandled = CompletableDeferred<Unit>()
+            val engine =
+                MockEngine {
+                    val count = requestCount.value + 1
+                    requestCount.value = count
+                    val response =
+                        if (count == 1) {
+                            firstRequestHandled.complete(Unit)
+                            initializationAndSegmentResponse(endSegmentNumber = 1, targetAudioReadaheadMs = 500)
+                        } else {
+                            finalSegmentResponse()
+                        }
+                    respond(
+                        content = response,
+                        status = HttpStatusCode.OK,
+                        headers = headersOf(HttpHeaders.ContentType, "application/vnd.yt-ump"),
+                    )
+                }
+
+            val chunks =
+                async {
+                    SabrAudioStream(
+                        httpClient = HttpClient(engine),
+                        bootstrap = bootstrap().copy(durationMs = 2_000, contentLengthBytes = 10),
+                        playbackPositionMs = { playbackPositionMs.value },
+                    ).bytes().toList()
+                }
+
+            firstRequestHandled.await()
+            delay(100)
+            assertEquals(1, requestCount.value)
+
+            playbackPositionMs.value = 600
+            assertEquals(3, chunks.await().size)
+            assertEquals(2, requestCount.value)
+        }
+
+    @Test
+    fun initialMediaTimeStartsNearSeekTargetAndAcceptsNonzeroFirstSegment() =
+        runBlocking {
+            var requestBody: ByteArray? = null
+            val engine =
+                MockEngine { request ->
+                    requestBody = (request.body as OutgoingContent.ByteArrayContent).bytes()
+                    respond(
+                        content = seekResponse(sequenceNumber = 6, startMs = 60_000),
+                        status = HttpStatusCode.OK,
+                        headers = headersOf(HttpHeaders.ContentType, "application/vnd.yt-ump"),
+                    )
+                }
+
+            val chunks =
+                SabrAudioStream(
+                    httpClient = HttpClient(engine),
+                    bootstrap = bootstrap().copy(durationMs = 61_000),
+                    initialPlayerTimeMs = 60_000,
+                ).chunks().toList()
+
+            assertEquals(60_000, decodePlayerTimeMs(requestBody ?: error("No SABR request")))
+            assertEquals(listOf(true, false), chunks.map(SabrChunk::isInitialization))
+            assertEquals(6, chunks.last().sequenceNumber)
+            assertEquals(60_000, chunks.last().startMs)
+        }
+
+    @Test
+    fun protectionPendingWithoutMediaIsTypedAsAttestationFailure() =
+        runBlocking {
+            val diagnostics = mutableListOf<SabrResponseDiagnostics>()
+            val engine =
+                MockEngine {
+                    respond(
+                        content = umpPart(UmpPartType.STREAM_PROTECTION_STATUS, streamProtectionStatus(status = 2)),
+                        status = HttpStatusCode.OK,
+                        headers = headersOf(HttpHeaders.ContentType, "application/vnd.yt-ump"),
+                    )
+                }
+
+            val error =
+                assertFailsWith<SabrProtocolException> {
+                    SabrAudioStream(
+                        httpClient = HttpClient(engine),
+                        bootstrap = bootstrap(),
+                        onResponse = diagnostics::add,
+                    ).bytes().toList()
+                }
+
+            assertEquals(SabrFailureKind.ATTESTATION_REQUIRED, error.kind)
+            assertEquals(2, assertNotNull(diagnostics.firstNotNullOfOrNull(SabrResponseDiagnostics::protectionStatus)))
+        }
+
+    @Test
+    fun protectionPendingPersistsUntilLaterMediaStarvation() =
+        runBlocking {
+            var requests = 0
+            val diagnostics = mutableListOf<SabrResponseDiagnostics>()
+            val engine =
+                MockEngine {
+                    requests++
+                    respond(
+                        content =
+                            if (requests == 1) {
+                                initializationAndSegmentResponse(endSegmentNumber = 1) +
+                                    umpPart(
+                                        UmpPartType.STREAM_PROTECTION_STATUS,
+                                        streamProtectionStatus(status = 2, maxRetries = 3),
+                                    )
+                            } else {
+                                umpPart(UmpPartType.NEXT_REQUEST_POLICY, nextRequestPolicy(0))
+                            },
+                        status = HttpStatusCode.OK,
+                        headers = headersOf(HttpHeaders.ContentType, "application/vnd.yt-ump"),
+                    )
+                }
+
+            val error =
+                assertFailsWith<SabrProtocolException> {
+                    SabrAudioStream(
+                        httpClient = HttpClient(engine),
+                        bootstrap = bootstrap().copy(durationMs = 2_000, contentLengthBytes = 10),
+                        onResponse = diagnostics::add,
+                    ).bytes().toList()
+                }
+
+            assertEquals(SabrFailureKind.ATTESTATION_REQUIRED, error.kind)
+            assertEquals(2, requests)
+            assertEquals(
+                1_000L,
+                diagnostics
+                    .first()
+                    .bufferedRanges
+                    .single()
+                    .durationMs,
+            )
+        }
+
+    @Test
+    fun repeatedPendingStatusHonorsServerRetryBudgetEvenWithMedia() =
+        runBlocking {
+            var requests = 0
+            val engine =
+                MockEngine {
+                    requests++
+                    val media =
+                        if (requests == 1) {
+                            initializationAndSegmentResponse(endSegmentNumber = 2)
+                        } else {
+                            finalSegmentResponse(includeEndOfTrack = false)
+                        }
+                    respond(
+                        content =
+                            media +
+                                umpPart(
+                                    UmpPartType.STREAM_PROTECTION_STATUS,
+                                    streamProtectionStatus(status = 2, maxRetries = 1),
+                                ),
+                        status = HttpStatusCode.OK,
+                        headers = headersOf(HttpHeaders.ContentType, "application/vnd.yt-ump"),
+                    )
+                }
+
+            val error =
+                assertFailsWith<SabrProtocolException> {
+                    SabrAudioStream(
+                        httpClient = HttpClient(engine),
+                        bootstrap = bootstrap().copy(durationMs = 3_000, contentLengthBytes = 13),
+                    ).bytes().toList()
+                }
+
+            assertEquals(SabrFailureKind.ATTESTATION_REQUIRED, error.kind)
+            assertEquals(2, requests)
+        }
+
+    @Test
+    fun zeroProtectionRetryBudgetFailsOnFirstPendingResponse() =
+        runBlocking {
+            var requests = 0
+            val engine =
+                MockEngine {
+                    requests++
+                    respond(
+                        content =
+                            initializationAndSegmentResponse(endSegmentNumber = 1) +
+                                umpPart(
+                                    UmpPartType.STREAM_PROTECTION_STATUS,
+                                    streamProtectionStatus(status = 2, maxRetries = 0),
+                                ),
+                        status = HttpStatusCode.OK,
+                        headers = headersOf(HttpHeaders.ContentType, "application/vnd.yt-ump"),
+                    )
+                }
+
+            val error =
+                assertFailsWith<SabrProtocolException> {
+                    SabrAudioStream(
+                        httpClient = HttpClient(engine),
+                        bootstrap = bootstrap().copy(durationMs = 2_000, contentLengthBytes = 10),
+                    ).bytes().toList()
+                }
+
+            assertEquals(SabrFailureKind.ATTESTATION_REQUIRED, error.kind)
+            assertEquals(1, requests)
+        }
+
+    @Test
+    fun protectionRequiredIsImmediateEvenWhenResponseContainsMedia() =
+        runBlocking {
+            val engine =
+                MockEngine {
+                    respond(
+                        content =
+                            initializationAndSegmentResponse(endSegmentNumber = 1) +
+                                umpPart(
+                                    UmpPartType.STREAM_PROTECTION_STATUS,
+                                    streamProtectionStatus(status = 3),
+                                ),
+                        status = HttpStatusCode.OK,
+                        headers = headersOf(HttpHeaders.ContentType, "application/vnd.yt-ump"),
+                    )
+                }
+
+            val error =
+                assertFailsWith<SabrProtocolException> {
+                    SabrAudioStream(
+                        httpClient = HttpClient(engine),
+                        bootstrap = bootstrap().copy(durationMs = 2_000, contentLengthBytes = 10),
+                    ).bytes().toList()
+                }
+
+            assertEquals(SabrFailureKind.ATTESTATION_REQUIRED, error.kind)
+        }
+
+    private fun completeResponse(endSegmentNumber: Int): ByteArray = initializationResponsePrefix(endSegmentNumber) + mediaResponseSuffix()
+
+    private fun initializationResponsePrefix(endSegmentNumber: Int): ByteArray =
+        umpPart(UmpPartType.FORMAT_INITIALIZATION_METADATA, initialization(endSegmentNumber)) +
+            umpPart(UmpPartType.MEDIA_HEADER, mediaHeader(headerId = 1, isInit = true, sequenceNumber = 0, contentLength = 4)) +
+            umpPart(UmpPartType.MEDIA, byteArrayOf(1, 1, 2, 3, 4)) +
+            umpPart(UmpPartType.MEDIA_END, byteArrayOf(1))
+
+    private fun mediaResponseSuffix(): ByteArray =
+        umpPart(UmpPartType.MEDIA_HEADER, mediaHeader(headerId = 2, isInit = false, sequenceNumber = 0, contentLength = 3)) +
+            umpPart(UmpPartType.MEDIA, byteArrayOf(2, 5, 6, 7)) +
+            umpPart(UmpPartType.MEDIA_END, byteArrayOf(2)) +
+            umpPart(UmpPartType.END_OF_TRACK, byteArrayOf())
+
+    private fun initializationAndSegmentResponse(
+        endSegmentNumber: Int,
+        targetAudioReadaheadMs: Int? = null,
+    ): ByteArray =
+        (targetAudioReadaheadMs?.let { umpPart(UmpPartType.NEXT_REQUEST_POLICY, nextRequestPolicy(it)) } ?: byteArrayOf()) +
+            umpPart(UmpPartType.FORMAT_INITIALIZATION_METADATA, initialization(endSegmentNumber, durationMs = 2_000)) +
+            umpPart(UmpPartType.MEDIA_HEADER, mediaHeader(headerId = 1, isInit = true, sequenceNumber = 0, contentLength = 4)) +
+            umpPart(UmpPartType.MEDIA, byteArrayOf(1, 1, 2, 3, 4)) +
+            umpPart(UmpPartType.MEDIA_END, byteArrayOf(1)) +
+            umpPart(UmpPartType.MEDIA_HEADER, mediaHeader(headerId = 2, isInit = false, sequenceNumber = 0, contentLength = 3)) +
+            umpPart(UmpPartType.MEDIA, byteArrayOf(2, 5, 6, 7)) +
+            umpPart(UmpPartType.MEDIA_END, byteArrayOf(2))
+
+    private fun finalSegmentResponse(includeEndOfTrack: Boolean = true): ByteArray =
+        umpPart(
+            UmpPartType.MEDIA_HEADER,
+            mediaHeader(headerId = 3, isInit = false, sequenceNumber = 1, contentLength = 3, startMs = 1_000),
+        ) +
+            umpPart(UmpPartType.MEDIA, byteArrayOf(3, 8, 9, 10)) +
+            umpPart(UmpPartType.MEDIA_END, byteArrayOf(3)) +
+            if (includeEndOfTrack) umpPart(UmpPartType.END_OF_TRACK, byteArrayOf()) else byteArrayOf()
+
+    private fun seekResponse(
+        sequenceNumber: Int,
+        startMs: Long,
+    ): ByteArray =
+        umpPart(UmpPartType.FORMAT_INITIALIZATION_METADATA, initialization(sequenceNumber, durationMs = startMs + 1_000)) +
+            umpPart(UmpPartType.MEDIA_HEADER, mediaHeader(headerId = 1, isInit = true, sequenceNumber = 0, contentLength = 4)) +
+            umpPart(UmpPartType.MEDIA, byteArrayOf(1, 1, 2, 3, 4)) +
+            umpPart(UmpPartType.MEDIA_END, byteArrayOf(1)) +
+            umpPart(
+                UmpPartType.MEDIA_HEADER,
+                mediaHeader(
+                    headerId = 2,
+                    isInit = false,
+                    sequenceNumber = sequenceNumber,
+                    contentLength = 3,
+                    startMs = startMs,
+                ),
+            ) +
+            umpPart(UmpPartType.MEDIA, byteArrayOf(2, 5, 6, 7)) +
+            umpPart(UmpPartType.MEDIA_END, byteArrayOf(2)) +
+            umpPart(UmpPartType.END_OF_TRACK, byteArrayOf())
+
+    private fun streamProtectionStatus(
+        status: Int,
+        maxRetries: Int = 1,
+    ): ByteArray =
+        ProtoWriter()
+            .apply {
+                int32(1, status)
+                int32(2, maxRetries)
+            }.toByteArray()
+
+    private fun contextUpdate(type: Int): ByteArray =
+        ProtoWriter()
+            .apply {
+                int32(1, type)
+                bytes(3, byteArrayOf(type.toByte()))
+            }.toByteArray()
+
+    private fun nextRequestPolicy(targetAudioReadaheadMs: Int): ByteArray =
+        ProtoWriter()
+            .apply {
+                int32(1, targetAudioReadaheadMs)
+                int32(3, 5_000)
+            }.toByteArray()
+
+    private fun initialization(
+        endSegmentNumber: Int,
+        durationMs: Long = 1_000,
+        itag: Int = 140,
+        lastModified: Long = 100,
+    ): ByteArray =
+        ProtoWriter()
+            .apply {
+                message(2) {
+                    int32(1, itag)
+                    int64(2, lastModified)
+                    string(3, "x")
+                }
+                int64(3, durationMs)
+                int64(4, endSegmentNumber.toLong())
+            }.toByteArray()
+
+    private fun mediaHeader(
+        headerId: Int,
+        isInit: Boolean,
+        sequenceNumber: Int,
+        contentLength: Int,
+        startMs: Long = 0,
+        itag: Int = 140,
+        lastModified: Long = 100,
+    ): ByteArray =
+        ProtoWriter()
+            .apply {
+                int32(1, headerId)
+                int32(3, itag)
+                int64(4, lastModified)
+                string(5, "x")
+                if (isInit) bool(8, true)
+                int32(9, sequenceNumber)
+                if (!isInit) {
+                    if (startMs != 0L) int64(11, startMs)
+                    int64(12, 1_000)
+                }
+                int64(14, contentLength.toLong())
+            }.toByteArray()
+
+    private fun mediaSegment(
+        headerId: Int,
+        itag: Int,
+        lastModified: Long,
+        isInit: Boolean = false,
+        data: ByteArray,
+    ): ByteArray =
+        umpPart(
+            UmpPartType.MEDIA_HEADER,
+            mediaHeader(
+                headerId = headerId,
+                isInit = isInit,
+                sequenceNumber = 0,
+                contentLength = data.size,
+                itag = itag,
+                lastModified = lastModified,
+            ),
+        ) +
+            umpPart(UmpPartType.MEDIA, byteArrayOf(headerId.toByte()) + data) +
+            umpPart(UmpPartType.MEDIA_END, byteArrayOf(headerId.toByte()))
+
+    private fun decodePlayerTimeMs(request: ByteArray): Long {
+        val requestReader = ProtoReader(request)
+        var clientAbr = byteArrayOf()
+        while (requestReader.hasRemaining) {
+            val tag = requestReader.tag()
+            if (tag.field == 1) {
+                clientAbr = requestReader.bytes()
+                break
+            }
+            requestReader.skip(tag)
+        }
+        val abrReader = ProtoReader(clientAbr)
+        while (abrReader.hasRemaining) {
+            val tag = abrReader.tag()
+            if (tag.field == 28) return abrReader.varint()
+            abrReader.skip(tag)
+        }
+        return 0
+    }
+
+    private fun bootstrap() =
+        SabrBootstrap(
+            videoId = "video-1",
+            serverAbrStreamingUrl = "https://example.googlevideo.com/videoplayback?sabr=1",
+            videoPlaybackUstreamerConfig = byteArrayOf(1, 2, 3),
+            clientName = 3,
+            clientVersion = "21.02.35",
+            audioFormat = SabrFormatId(140, 100, "x"),
+            discardVideoFormat = SabrFormatId(160, 200),
+            discardVideoHeight = 144,
+            durationMs = 1_000,
+            contentLengthBytes = 7,
+            mimeType = "audio/mp4",
+        )
+
+    private fun umpPart(
+        type: Int,
+        data: ByteArray,
+    ): ByteArray = umpVarint(type) + umpVarint(data.size) + data
+
+    private fun umpVarint(value: Int): ByteArray =
+        when {
+            value < 128 -> byteArrayOf(value.toByte())
+            value < 16_384 -> byteArrayOf(((value and 0x3f) or 0x80).toByte(), (value ushr 6).toByte())
+            else -> error("Test payload too large")
+        }
+}

@@ -1,0 +1,5 @@
+jdk:
+  - openjdk21
+
+install:
+  - ./gradlew clean allTests ktlintCheck apiCheck assemble publishToMavenLocal -PGROUP="$GROUP" -PPOM_ARTIFACT_ID="$ARTIFACT" -PVERSION_NAME="$VERSION" --no-build-cache --no-configuration-cache
