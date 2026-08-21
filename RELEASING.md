@@ -44,4 +44,5 @@ token, namespace registration, or GPG key is required.
 
 JitPack exposes `GROUP`, `ARTIFACT`, and `VERSION` to `jitpack.yml`. The build
 maps those values to Gradle publication properties so generated publications
-match `com.github.MetrolistGroup:innertubex:<tag>`.
+are exposed by JitPack as
+`com.github.MetrolistGroup.innertubex:innertubex:<tag>` for KMP consumers.

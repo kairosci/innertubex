@@ -6,6 +6,11 @@ that `0.x` releases may contain breaking API changes.
 
 ## [Unreleased]
 
+### Fixed
+
+- Documented JitPack's variant-aware KMP coordinate instead of its aggregate
+  repository POM coordinate.
+
 ## [0.1.1] - 2026-08-21
 
 ### Fixed

@@ -22,12 +22,12 @@ playlist, and player operations while adding:
 ```kotlin
 repositories {
     maven("https://jitpack.io") {
-        content { includeGroup("com.github.MetrolistGroup") }
+        content { includeGroup("com.github.MetrolistGroup.innertubex") }
     }
 }
 
 dependencies {
-    implementation("com.github.MetrolistGroup:innertubex:v0.1.1")
+    implementation("com.github.MetrolistGroup.innertubex:innertubex:v0.1.1")
 }
 ```
 
