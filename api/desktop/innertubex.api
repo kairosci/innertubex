@@ -1212,7 +1212,9 @@ public final synthetic class com/metrolist/innertubex/models/response/AccountMen
 
 public final class com/metrolist/innertubex/models/response/AccountMenuResponse$Action {
 	public static final field Companion Lcom/metrolist/innertubex/models/response/AccountMenuResponse$Action$Companion;
+	public fun <init> ()V
 	public fun <init> (Lcom/metrolist/innertubex/models/response/AccountMenuResponse$Action$OpenPopupAction;)V
+	public synthetic fun <init> (Lcom/metrolist/innertubex/models/response/AccountMenuResponse$Action$OpenPopupAction;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
 	public final fun component1 ()Lcom/metrolist/innertubex/models/response/AccountMenuResponse$Action$OpenPopupAction;
 	public final fun copy (Lcom/metrolist/innertubex/models/response/AccountMenuResponse$Action$OpenPopupAction;)Lcom/metrolist/innertubex/models/response/AccountMenuResponse$Action;
 	public static synthetic fun copy$default (Lcom/metrolist/innertubex/models/response/AccountMenuResponse$Action;Lcom/metrolist/innertubex/models/response/AccountMenuResponse$Action$OpenPopupAction;ILjava/lang/Object;)Lcom/metrolist/innertubex/models/response/AccountMenuResponse$Action;
@@ -1239,7 +1241,9 @@ public final class com/metrolist/innertubex/models/response/AccountMenuResponse$
 
 public final class com/metrolist/innertubex/models/response/AccountMenuResponse$Action$OpenPopupAction {
 	public static final field Companion Lcom/metrolist/innertubex/models/response/AccountMenuResponse$Action$OpenPopupAction$Companion;
+	public fun <init> ()V
 	public fun <init> (Lcom/metrolist/innertubex/models/response/AccountMenuResponse$Action$OpenPopupAction$Popup;)V
+	public synthetic fun <init> (Lcom/metrolist/innertubex/models/response/AccountMenuResponse$Action$OpenPopupAction$Popup;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
 	public final fun component1 ()Lcom/metrolist/innertubex/models/response/AccountMenuResponse$Action$OpenPopupAction$Popup;
 	public final fun copy (Lcom/metrolist/innertubex/models/response/AccountMenuResponse$Action$OpenPopupAction$Popup;)Lcom/metrolist/innertubex/models/response/AccountMenuResponse$Action$OpenPopupAction;
 	public static synthetic fun copy$default (Lcom/metrolist/innertubex/models/response/AccountMenuResponse$Action$OpenPopupAction;Lcom/metrolist/innertubex/models/response/AccountMenuResponse$Action$OpenPopupAction$Popup;ILjava/lang/Object;)Lcom/metrolist/innertubex/models/response/AccountMenuResponse$Action$OpenPopupAction;
@@ -1266,12 +1270,15 @@ public final class com/metrolist/innertubex/models/response/AccountMenuResponse$
 
 public final class com/metrolist/innertubex/models/response/AccountMenuResponse$Action$OpenPopupAction$Popup {
 	public static final field Companion Lcom/metrolist/innertubex/models/response/AccountMenuResponse$Action$OpenPopupAction$Popup$Companion;
+	public fun <init> ()V
 	public fun <init> (Lcom/metrolist/innertubex/models/response/AccountMenuResponse$Action$OpenPopupAction$Popup$MultiPageMenuRenderer;)V
+	public synthetic fun <init> (Lcom/metrolist/innertubex/models/response/AccountMenuResponse$Action$OpenPopupAction$Popup$MultiPageMenuRenderer;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
 	public final fun component1 ()Lcom/metrolist/innertubex/models/response/AccountMenuResponse$Action$OpenPopupAction$Popup$MultiPageMenuRenderer;
 	public final fun copy (Lcom/metrolist/innertubex/models/response/AccountMenuResponse$Action$OpenPopupAction$Popup$MultiPageMenuRenderer;)Lcom/metrolist/innertubex/models/response/AccountMenuResponse$Action$OpenPopupAction$Popup;
 	public static synthetic fun copy$default (Lcom/metrolist/innertubex/models/response/AccountMenuResponse$Action$OpenPopupAction$Popup;Lcom/metrolist/innertubex/models/response/AccountMenuResponse$Action$OpenPopupAction$Popup$MultiPageMenuRenderer;ILjava/lang/Object;)Lcom/metrolist/innertubex/models/response/AccountMenuResponse$Action$OpenPopupAction$Popup;
 	public fun equals (Ljava/lang/Object;)Z
 	public final fun getMultiPageMenuRenderer ()Lcom/metrolist/innertubex/models/response/AccountMenuResponse$Action$OpenPopupAction$Popup$MultiPageMenuRenderer;
+	public final fun getPopupContent ()Lcom/metrolist/innertubex/models/response/AccountMenuResponse$Action$OpenPopupAction$Popup$PopupContent;
 	public fun hashCode ()I
 	public fun toString ()Ljava/lang/String;
 }
@@ -1322,7 +1329,9 @@ public final class com/metrolist/innertubex/models/response/AccountMenuResponse$
 
 public final class com/metrolist/innertubex/models/response/AccountMenuResponse$Action$OpenPopupAction$Popup$MultiPageMenuRenderer$Header {
 	public static final field Companion Lcom/metrolist/innertubex/models/response/AccountMenuResponse$Action$OpenPopupAction$Popup$MultiPageMenuRenderer$Header$Companion;
+	public fun <init> ()V
 	public fun <init> (Lcom/metrolist/innertubex/models/response/AccountMenuResponse$Action$OpenPopupAction$Popup$MultiPageMenuRenderer$Header$ActiveAccountHeaderRenderer;)V
+	public synthetic fun <init> (Lcom/metrolist/innertubex/models/response/AccountMenuResponse$Action$OpenPopupAction$Popup$MultiPageMenuRenderer$Header$ActiveAccountHeaderRenderer;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
 	public final fun component1 ()Lcom/metrolist/innertubex/models/response/AccountMenuResponse$Action$OpenPopupAction$Popup$MultiPageMenuRenderer$Header$ActiveAccountHeaderRenderer;
 	public final fun copy (Lcom/metrolist/innertubex/models/response/AccountMenuResponse$Action$OpenPopupAction$Popup$MultiPageMenuRenderer$Header$ActiveAccountHeaderRenderer;)Lcom/metrolist/innertubex/models/response/AccountMenuResponse$Action$OpenPopupAction$Popup$MultiPageMenuRenderer$Header;
 	public static synthetic fun copy$default (Lcom/metrolist/innertubex/models/response/AccountMenuResponse$Action$OpenPopupAction$Popup$MultiPageMenuRenderer$Header;Lcom/metrolist/innertubex/models/response/AccountMenuResponse$Action$OpenPopupAction$Popup$MultiPageMenuRenderer$Header$ActiveAccountHeaderRenderer;ILjava/lang/Object;)Lcom/metrolist/innertubex/models/response/AccountMenuResponse$Action$OpenPopupAction$Popup$MultiPageMenuRenderer$Header;
@@ -1345,6 +1354,7 @@ public final synthetic class com/metrolist/innertubex/models/response/AccountMen
 
 public final class com/metrolist/innertubex/models/response/AccountMenuResponse$Action$OpenPopupAction$Popup$MultiPageMenuRenderer$Header$ActiveAccountHeaderRenderer {
 	public static final field Companion Lcom/metrolist/innertubex/models/response/AccountMenuResponse$Action$OpenPopupAction$Popup$MultiPageMenuRenderer$Header$ActiveAccountHeaderRenderer$Companion;
+	public fun <init> ()V
 	public fun <init> (Lcom/metrolist/innertubex/models/Runs;Lcom/metrolist/innertubex/models/Runs;Lcom/metrolist/innertubex/models/Runs;Lcom/metrolist/innertubex/models/Thumbnails;)V
 	public synthetic fun <init> (Lcom/metrolist/innertubex/models/Runs;Lcom/metrolist/innertubex/models/Runs;Lcom/metrolist/innertubex/models/Runs;Lcom/metrolist/innertubex/models/Thumbnails;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
 	public final fun component1 ()Lcom/metrolist/innertubex/models/Runs;
@@ -1384,7 +1394,9 @@ public final class com/metrolist/innertubex/models/response/AccountMenuResponse$
 
 public final class com/metrolist/innertubex/models/response/AccountMenuResponse$Action$OpenPopupAction$Popup$PopupContent {
 	public static final field Companion Lcom/metrolist/innertubex/models/response/AccountMenuResponse$Action$OpenPopupAction$Popup$PopupContent$Companion;
+	public fun <init> ()V
 	public fun <init> (Lcom/metrolist/innertubex/models/response/AccountMenuResponse$Action$OpenPopupAction$Popup$MultiPageMenuRenderer;)V
+	public synthetic fun <init> (Lcom/metrolist/innertubex/models/response/AccountMenuResponse$Action$OpenPopupAction$Popup$MultiPageMenuRenderer;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
 	public final fun component1 ()Lcom/metrolist/innertubex/models/response/AccountMenuResponse$Action$OpenPopupAction$Popup$MultiPageMenuRenderer;
 	public final fun copy (Lcom/metrolist/innertubex/models/response/AccountMenuResponse$Action$OpenPopupAction$Popup$MultiPageMenuRenderer;)Lcom/metrolist/innertubex/models/response/AccountMenuResponse$Action$OpenPopupAction$Popup$PopupContent;
 	public static synthetic fun copy$default (Lcom/metrolist/innertubex/models/response/AccountMenuResponse$Action$OpenPopupAction$Popup$PopupContent;Lcom/metrolist/innertubex/models/response/AccountMenuResponse$Action$OpenPopupAction$Popup$MultiPageMenuRenderer;ILjava/lang/Object;)Lcom/metrolist/innertubex/models/response/AccountMenuResponse$Action$OpenPopupAction$Popup$PopupContent;
@@ -3686,15 +3698,6 @@ public final class com/metrolist/innertubex/sabr/SabrVideoStream {
 	public synthetic fun <init> (Lio/ktor/client/HttpClient;Lcom/metrolist/innertubex/sabr/SabrBootstrap;ILkotlin/jvm/functions/Function0;Lkotlin/jvm/functions/Function1;Lkotlin/jvm/functions/Function2;JLcom/metrolist/innertubex/InnerTubeLogger;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
 	public final fun bytes ()Lkotlinx/coroutines/flow/Flow;
 	public final fun chunks ()Lkotlinx/coroutines/flow/Flow;
-}
-
-public final class com/metrolist/innertubex/utils/Sha1Kt {
-	public static final fun sha1 (Ljava/lang/String;)Ljava/lang/String;
-}
-
-public final class com/metrolist/innertubex/utils/UtilsKt {
-	public static final fun parseCookieString (Ljava/lang/String;)Ljava/util/Map;
-	public static final fun sanitizeCookieString (Ljava/lang/String;)Ljava/lang/String;
 }
 
 public final class com/metrolist/innertubex/utils/YouTubeUrlParser {

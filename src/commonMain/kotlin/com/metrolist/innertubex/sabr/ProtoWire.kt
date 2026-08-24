@@ -1,5 +1,12 @@
 package com.metrolist.innertubex.sabr
 
+private const val MAX_PROTOBUF_FIELD_NUMBER = 536_870_911
+private const val FIRST_RESERVED_FIELD_NUMBER = 19_000
+private const val LAST_RESERVED_FIELD_NUMBER = 19_999
+
+private fun isValidProtobufFieldNumber(field: Long): Boolean =
+    field in 1..MAX_PROTOBUF_FIELD_NUMBER.toLong() && field !in FIRST_RESERVED_FIELD_NUMBER.toLong()..LAST_RESERVED_FIELD_NUMBER.toLong()
+
 internal class ProtoWriter(
     initialCapacity: Int = 256,
 ) {
@@ -71,7 +78,7 @@ internal class ProtoWriter(
         field: Int,
         wireType: Int,
     ) {
-        require(field > 0) { "Protobuf field number must be positive" }
+        require(isValidProtobufFieldNumber(field.toLong())) { "Invalid protobuf field number $field" }
         varint((field.toLong() shl 3) or wireType.toLong())
     }
 
@@ -131,16 +138,20 @@ internal class ProtoReader(
 
     fun tag(): ProtoTag {
         val raw = varint()
-        if (raw == 0L) throw SabrProtocolException("Invalid protobuf tag 0")
-        return ProtoTag(field = (raw ushr 3).toInt(), wireType = (raw and 7).toInt())
+        val field = raw ushr 3
+        if (!isValidProtobufFieldNumber(field)) throw SabrProtocolException("Invalid protobuf field number $field")
+        return ProtoTag(field = field.toInt(), wireType = (raw and 7).toInt())
     }
 
     fun varint(): Long {
         var result = 0L
         var shift = 0
-        while (shift < 64) {
+        repeat(10) {
             if (position >= data.size) throw SabrProtocolException("Truncated protobuf varint")
             val byte = data[position++].toInt() and 0xff
+            if (shift == 63 && ((byte and 0x7f) > 1 || (byte and 0x80) != 0)) {
+                throw SabrProtocolException("Protobuf varint overflows 64 bits")
+            }
             result = result or ((byte and 0x7f).toLong() shl shift)
             if ((byte and 0x80) == 0) return result
             shift += 7
@@ -148,7 +159,11 @@ internal class ProtoReader(
         throw SabrProtocolException("Protobuf varint is too long")
     }
 
-    fun bool(): Boolean = varint() != 0L
+    fun bool(): Boolean {
+        val value = varint()
+        if (value < 0) throw SabrProtocolException("Invalid protobuf boolean $value")
+        return value != 0L
+    }
 
     fun bytes(): ByteArray {
         val length = varint()

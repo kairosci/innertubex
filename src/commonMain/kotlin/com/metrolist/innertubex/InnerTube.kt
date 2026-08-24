@@ -831,14 +831,16 @@ class InnerTube(
                         append("Cache-Control", "no-cache")
                         append("Content-Type", "application/json")
                         requestSession.visitorData?.let { append("X-Goog-Visitor-Id", it) }
-                        requestSession.cookie?.let { cookieValue ->
-                            append("Cookie", cookieValue)
-                            append("X-Goog-AuthUser", requestSession.authUser)
-                            val sapisid = requestSession.sapisid
-                            if (!sapisid.isNullOrBlank()) {
-                                val currentTime = Clock.System.now().toEpochMilliseconds() / 1000
-                                val sapisidHash = sha1("$currentTime $sapisid $origin")
-                                append("Authorization", "SAPISIDHASH ${currentTime}_$sapisidHash")
+                        if (client.loginSupported) {
+                            requestSession.cookie?.let { cookieValue ->
+                                append("Cookie", cookieValue)
+                                append("X-Goog-AuthUser", requestSession.authUser)
+                                val sapisid = requestSession.sapisid
+                                if (!sapisid.isNullOrBlank()) {
+                                    val currentTime = Clock.System.now().toEpochMilliseconds() / 1000
+                                    val sapisidHash = sha1("$currentTime $sapisid $origin")
+                                    append("Authorization", "SAPISIDHASH ${currentTime}_$sapisidHash")
+                                }
                             }
                         }
                     }
@@ -897,7 +899,7 @@ class InnerTube(
         setLogin: Boolean? = null,
     ): HttpResponse {
         val requestSession = sessionSnapshot()
-        val setLoginForRequest = setLogin ?: requestSession.useLoginForBrowse
+        val setLoginForRequest = setLogin ?: true
         val visitorDataForRequest = requestSession.visitorData.takeUnless { requestSession.regionOverrideActive }
         return executeRequest(operation = "search") {
             httpClient.post("search") {
@@ -1657,13 +1659,8 @@ class InnerTubeHttpException(
     val status: HttpStatusCode,
 ) : IllegalStateException("$operation failed with HTTP ${status.value}")
 
-private fun systemYouTubeLocale(): YouTubeLocale {
-    val tag = Locale.getDefault().toLanguageTag()
-    val parts = tag.split("-")
-    val hl = parts.getOrElse(0) { "" }
-    val gl = parts.getOrElse(1) { "" }.uppercase()
-    return YouTubeLocale(gl = gl, hl = hl)
-}
+internal fun systemYouTubeLocale(locale: Locale = Locale.getDefault()): YouTubeLocale =
+    YouTubeLocale(gl = locale.country.uppercase(Locale.ROOT), hl = locale.toLanguageTag())
 
 private fun Throwable.logType(): String = this::class.simpleName ?: "Exception"
 

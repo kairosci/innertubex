@@ -42,7 +42,10 @@ class YouTubeCipherService(
         private const val OKHTTP_USER_AGENT = "okhttp/5.4.0"
         private const val MAX_PLAYER_CACHE_ENTRIES = 4
         private const val MAX_PLAYER_SCRIPT_BYTES = 8 * 1024 * 1024
-        private val N_PARAMETER_REGEX = Regex("[&?]n=([^&]+)")
+        private const val MAX_MEDIA_URL_LENGTH = 16 * 1024
+        private const val MAX_SOLVER_OUTPUT_LENGTH = 256 * 1024
+        private val N_PARAMETER_REGEX = Regex("[&?]n=([^&#]+)")
+        private val QUERY_PARAMETER_NAME_REGEX = Regex("[A-Za-z][A-Za-z0-9._~-]*")
     }
 
     private val engine = QuickJsEngine()
@@ -145,7 +148,7 @@ class YouTubeCipherService(
 
                 val cached = cacheMutex.withLock { solverCacheHitLocked(playerUrl) }
                 val cipherFormats = formats.count { !it.signatureCipher.isNullOrBlank() || !it.cipher.isNullOrBlank() }
-                val nFormats = formats.count { it.url?.let { url -> url.contains("&n=") || url.contains("?n=") } == true }
+                val nFormats = formats.count { it.url?.extractNParameter() != null }
                 logger.d(
                     TAG,
                     "processFormats start formats=${formats.size} cipherFormats=$cipherFormats nFormats=$nFormats cachedSolver=${cached != null} player=${playerUrl.logId()}",
@@ -197,7 +200,7 @@ class YouTubeCipherService(
                     val sc = format.signatureCipher
                     if (!sc.isNullOrBlank()) {
                         val p = parseCipherParams(sc)
-                        if (p["s"] != null && p["url"] != null) {
+                        if (p["s"] != null && p["url"]?.isApprovedMediaUrl() == true && p.hasValidSignatureParameter()) {
                             sigTasks.add(SigTask(i, p, useSignatureCipherField = true))
                         }
                         continue
@@ -205,7 +208,7 @@ class YouTubeCipherService(
                     val c = format.cipher
                     if (!c.isNullOrBlank()) {
                         val p = parseCipherParams(c)
-                        if (p["s"] != null && p["url"] != null) {
+                        if (p["s"] != null && p["url"]?.isApprovedMediaUrl() == true && p.hasValidSignatureParameter()) {
                             sigTasks.add(SigTask(i, p, useSignatureCipherField = false))
                         }
                     }
@@ -284,8 +287,7 @@ class YouTubeCipherService(
                         if (solved != null) {
                             val url = task.params["url"] ?: continue
                             val sp = task.params["sp"] ?: "signature"
-                            val joiner = if ('?' in url) "&" else "?"
-                            val newUrl = "$url$joiner$sp=$solved"
+                            val newUrl = appendQueryParameter(url, sp, solved) ?: continue
                             val fmt = working[task.index]
                             working[task.index] =
                                 if (task.useSignatureCipherField) {
@@ -382,7 +384,8 @@ class YouTubeCipherService(
                         val solved = solvedN[task.nValue]
                         if (solved != null) {
                             val fmt = working[task.index]
-                            val newUrl = task.url.replace("n=${task.nValue}", "n=$solved")
+                            val match = task.url.findNParameter() ?: continue
+                            val newUrl = replaceQueryParameter(task.url, match, solved) ?: continue
                             working[task.index] = fmt.copy(url = newUrl)
                         }
                     }
@@ -463,8 +466,8 @@ class YouTubeCipherService(
             val solvedSig = solver.sigSolver(signature)
             if (solvedSig != null) {
                 val sigParam = params["sp"] ?: "signature"
-                val joiner = if ('?' in url) "&" else "?"
-                return format.copy(url = "$url$joiner$sigParam=$solvedSig", signatureCipher = null)
+                val newUrl = appendQueryParameter(url, sigParam, solvedSig) ?: return format
+                return format.copy(url = newUrl, signatureCipher = null)
             }
         }
 
@@ -476,13 +479,13 @@ class YouTubeCipherService(
             val solvedSig = solver.sigSolver(signature)
             if (solvedSig != null) {
                 val sigParam = params["sp"] ?: "signature"
-                val joiner = if ('?' in url) "&" else "?"
-                return format.copy(url = "$url$joiner$sigParam=$solvedSig", cipher = null)
+                val newUrl = appendQueryParameter(url, sigParam, solvedSig) ?: return format
+                return format.copy(url = newUrl, cipher = null)
             }
         }
 
         val url = format.url
-        if (!url.isNullOrBlank() && (url.contains("&n=") || url.contains("?n="))) {
+        if (!url.isNullOrBlank() && url.extractNParameter() != null) {
             val processedUrl = processNParameterWithSolver(solver, url)
             if (processedUrl != null) {
                 return format.copy(url = processedUrl)
@@ -496,10 +499,10 @@ class YouTubeCipherService(
         solver: CachedSolver,
         url: String,
     ): String? {
-        val nMatch = N_PARAMETER_REGEX.find(url) ?: return null
+        val nMatch = url.findNParameter() ?: return null
         val nValue = nMatch.groupValues[1]
         val solvedN = solver.nSolver(nValue) ?: return null
-        return url.replace("n=$nValue", "n=$solvedN")
+        return replaceQueryParameter(url, nMatch, solvedN)
     }
 
     /**
@@ -525,8 +528,7 @@ class YouTubeCipherService(
                         nValues = emptyList(),
                     ).sigByChallenge[signature]?.let { solvedSig ->
                         val sigParam = params["sp"] ?: "signature"
-                        val joiner = if ('?' in url) "&" else "?"
-                        return@operation "$url$joiner$sigParam=$solvedSig"
+                        return@operation appendQueryParameter(url, sigParam, solvedSig)
                     }
                     solveWithGitHubConfig(
                         playerUrl = playerUrl,
@@ -535,8 +537,7 @@ class YouTubeCipherService(
                     ).sigByChallenge[signature]
                         ?.let { solvedSig ->
                             val sigParam = params["sp"] ?: "signature"
-                            val joiner = if ('?' in url) "&" else "?"
-                            return@operation "$url$joiner$sigParam=$solvedSig"
+                            return@operation appendQueryParameter(url, sigParam, solvedSig)
                         }
                     val solver = getOrCreateSolver(playerUrl)
                     val solvedSig =
@@ -554,8 +555,7 @@ class YouTubeCipherService(
                             }
                     if (solvedSig != null) {
                         val sigParam = params["sp"] ?: "signature"
-                        val joiner = if ('?' in url) "&" else "?"
-                        "$url$joiner$sigParam=$solvedSig"
+                        appendQueryParameter(url, sigParam, solvedSig)
                     } else {
                         null
                     }
@@ -581,14 +581,14 @@ class YouTubeCipherService(
         withContext(Dispatchers.Default) {
             operationMutex.withLock operation@{
                 try {
-                    val nMatch = N_PARAMETER_REGEX.find(url)
-                    val nValue = nMatch?.groupValues?.get(1) ?: return@operation null
+                    val nMatch = url.findNParameter() ?: return@operation null
+                    val nValue = nMatch.groupValues[1]
                     solveWithZemerConfig(
                         playerUrl = playerUrl,
                         sigValues = emptyList(),
                         nValues = listOf(nValue),
                     ).nByChallenge[nValue]?.let { solvedN ->
-                        return@operation url.replace("n=$nValue", "n=$solvedN")
+                        return@operation replaceQueryParameter(url, nMatch, solvedN)
                     }
                     solveWithGitHubConfig(
                         playerUrl = playerUrl,
@@ -596,7 +596,7 @@ class YouTubeCipherService(
                         nValues = listOf(nValue),
                     ).nByChallenge[nValue]
                         ?.let { solvedN ->
-                            return@operation url.replace("n=$nValue", "n=$solvedN")
+                            return@operation replaceQueryParameter(url, nMatch, solvedN)
                         }
                     val solver = getOrCreateSolver(playerUrl)
                     val solvedN =
@@ -612,7 +612,7 @@ class YouTubeCipherService(
                                 r.nByChallenge[nValue]
                             }
                     if (solvedN != null) {
-                        url.replace("n=$nValue", "n=$solvedN")
+                        replaceQueryParameter(url, nMatch, solvedN)
                     } else {
                         null
                     }
@@ -863,8 +863,7 @@ class YouTubeCipherService(
         val nSolver: suspend (String) -> String? = { input ->
             if (parseResult.nFunctionCode != null) {
                 try {
-                    val result = solverEngine.callFunction("_solveN", input)
-                    result?.toString()
+                    solverEngine.callFunction("_solveN", input)
                 } catch (e: CancellationException) {
                     throw e
                 } catch (e: Exception) {
@@ -878,8 +877,7 @@ class YouTubeCipherService(
         val sigSolver: suspend (String) -> String? = { input ->
             if (parseResult.sigFunctionCode != null) {
                 try {
-                    val result = solverEngine.callFunction("_solveSig", input)
-                    result?.toString()
+                    solverEngine.callFunction("_solveSig", input)
                 } catch (e: CancellationException) {
                     throw e
                 } catch (e: Exception) {
@@ -937,7 +935,89 @@ class YouTubeCipherService(
         return params
     }
 
-    private fun String.extractNParameter(): String? = N_PARAMETER_REGEX.find(this)?.groupValues?.get(1)
+    internal fun appendQueryParameter(
+        url: String,
+        name: String,
+        value: String,
+    ): String? {
+        if (!url.isApprovedMediaUrl() ||
+            !QUERY_PARAMETER_NAME_REGEX.matches(name) ||
+            value.isBlank() ||
+            value.length > MAX_SOLVER_OUTPUT_LENGTH
+        ) {
+            return null
+        }
+        val fragmentStart = url.indexOf('#').takeIf { it >= 0 } ?: url.length
+        val hasQuery = url.indexOf('?').let { it >= 0 && it < fragmentStart }
+        val separator =
+            when {
+                !hasQuery -> "?"
+                fragmentStart > 0 && url[fragmentStart - 1] in "?&" -> ""
+                else -> "&"
+            }
+        return buildString(url.length + name.length + value.length + 2) {
+            append(url, 0, fragmentStart)
+            append(separator)
+            append(name)
+            append('=')
+            append(encodeQueryComponent(value))
+            append(url, fragmentStart, url.length)
+        }
+    }
+
+    internal fun replaceQueryParameter(
+        url: String,
+        match: MatchResult,
+        value: String,
+    ): String? {
+        val fragmentStart = url.indexOf('#').takeIf { it >= 0 } ?: url.length
+        if (!url.isApprovedMediaUrl() ||
+            match.range.first >= fragmentStart ||
+            value.isBlank() ||
+            value.length > MAX_SOLVER_OUTPUT_LENGTH
+        ) {
+            return null
+        }
+        val start = match.range.last + 1 - match.groupValues[1].length
+        return url.replaceRange(start, match.range.last + 1, encodeQueryComponent(value))
+    }
+
+    private fun encodeQueryComponent(value: String): String =
+        buildString(value.length) {
+            value.encodeToByteArray().forEach { byte ->
+                val c = byte.toInt() and 0xff
+                if (c in 0x30..0x39 || c in 0x41..0x5a || c in 0x61..0x7a || c == '-'.code || c == '.'.code || c == '_'.code ||
+                    c == '~'.code
+                ) {
+                    append(c.toChar())
+                } else {
+                    append('%')
+                    append("0123456789ABCDEF"[c ushr 4])
+                    append("0123456789ABCDEF"[c and 15])
+                }
+            }
+        }
+
+    private fun String.findNParameter(): MatchResult? {
+        if (!isApprovedMediaUrl()) return null
+        val fragmentStart = indexOf('#').takeIf { it >= 0 } ?: length
+        return N_PARAMETER_REGEX.find(this)?.takeIf { it.range.first < fragmentStart }
+    }
+
+    private fun String.extractNParameter(): String? = findNParameter()?.groupValues?.get(1)
+
+    private fun String.isApprovedMediaUrl(): Boolean {
+        if (length !in 1..MAX_MEDIA_URL_LENGTH) return false
+        val url = runCatching { Url(this) }.getOrNull() ?: return false
+        val isGoogleVideoHost = url.host == "googlevideo.com" || url.host.endsWith(".googlevideo.com")
+        return url.protocol.name == "https" &&
+            isGoogleVideoHost &&
+            url.encodedPath == "/videoplayback" &&
+            url.user == null &&
+            url.password == null
+    }
+
+    private fun Map<String, String>.hasValidSignatureParameter(): Boolean = get("sp")?.let(QUERY_PARAMETER_NAME_REGEX::matches) != false
 
     /**
      * Clean up resources.

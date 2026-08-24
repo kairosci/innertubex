@@ -22,6 +22,7 @@ import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
+import java.util.Locale
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
@@ -30,6 +31,33 @@ import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 class InnerTubeSessionTest {
+    @Test
+    fun cookieHeaderPrefixIsNormalizedBeforeSending() =
+        runBlocking {
+            val engine = MockEngine { respondOk() }
+            val innerTube = InnerTube(HttpClient(engine)).also { it.cookie = "Cookie: SAPISID=secret" }
+
+            innerTube.registerPlaybackWithSession(
+                client = YouTubeClient.WEB,
+                url = "https://s.youtube.com/api/stats/playback",
+                cpn = "cpn",
+                playlistId = null,
+                requestSession = innerTube.sessionSnapshot(),
+            )
+
+            assertEquals("SAPISID=secret", engine.requestHistory.single().headers[HttpHeaders.Cookie])
+        }
+
+    @Test
+    fun cookieLineBreaksAreRemovedAndOtherControlCharactersAreRejected() {
+        val lineWrapped = InnerTube(HttpClient(MockEngine { respondOk() }))
+        lineWrapped.cookie = "SAPISID=secret\r\n\t; PREF=f6=400"
+
+        assertEquals("SAPISID=secret; PREF=f6=400", lineWrapped.cookie)
+
+        assertFailsWith<IllegalArgumentException> { lineWrapped.cookie = "SAPISID=secret\u0000" }
+    }
+
     @Test
     fun sessionSnapshotStringDoesNotExposeCredentials() {
         val snapshot =
@@ -304,6 +332,62 @@ class InnerTubeSessionTest {
 
             assertTrue(engine.requestHistory.isEmpty())
         }
+
+    @Test
+    fun anonymousStatsRegistrationDoesNotSendAccountCredentials() =
+        runBlocking {
+            val engine = MockEngine { respondOk() }
+            val innerTube = InnerTube(HttpClient(engine)).also { it.cookie = "SAPISID=secret" }
+
+            innerTube.registerPlaybackWithSession(
+                YouTubeClient.ANDROID,
+                "https://s.youtube.com/api/stats/playback",
+                "cpn",
+                null,
+                innerTube.sessionSnapshot(),
+            )
+
+            val request = engine.requestHistory.single()
+            assertNull(request.headers[HttpHeaders.Cookie])
+            assertNull(request.headers[HttpHeaders.Authorization])
+            assertNull(request.headers["X-Goog-AuthUser"])
+        }
+
+    @Test
+    fun authenticatedStatsRegistrationStillSendsAccountCredentials() =
+        runBlocking {
+            val engine = MockEngine { respondOk() }
+            val innerTube = InnerTube(HttpClient(engine)).also { it.cookie = "SAPISID=secret" }
+
+            innerTube.registerPlaybackWithSession(
+                YouTubeClient.WEB,
+                "https://s.youtube.com/api/stats/playback",
+                "cpn",
+                null,
+                innerTube.sessionSnapshot(),
+            )
+
+            val request = engine.requestHistory.single()
+            assertEquals("SAPISID=secret", request.headers[HttpHeaders.Cookie])
+            assertTrue(request.headers[HttpHeaders.Authorization]?.startsWith("SAPISIDHASH ") == true)
+            assertEquals("0", request.headers["X-Goog-AuthUser"])
+        }
+
+    @Test
+    fun systemLocaleRetainsLanguageScriptAndUsesCountryForRegion() {
+        val scriptLocale =
+            Locale
+                .Builder()
+                .setLanguage("zh")
+                .setScript("Hant")
+                .setRegion("TW")
+                .build()
+
+        val locale = systemYouTubeLocale(scriptLocale)
+
+        assertEquals("zh-Hant-TW", locale.hl)
+        assertEquals("TW", locale.gl)
+    }
 
     @Test
     fun bulkSessionReplacementNeverPublishesMixedIdentity() {
@@ -630,6 +714,56 @@ class InnerTubeSessionTest {
             assertEquals("visitor-data", request.headers["X-Goog-Visitor-Id"])
             val body = (request.body as io.ktor.http.content.TextContent).text
             assertTrue(body.contains("\"visitorData\":\"visitor-data\""))
+        }
+
+    @Test
+    fun searchAuthenticatesByDefault() =
+        runBlocking {
+            val engine = MockEngine { respondOk() }
+            val innerTube =
+                clientWithContentNegotiation(engine).also {
+                    it.replaceSession(
+                        cookie = "SAPISID=account-secret",
+                        visitorData = "visitor-data",
+                        dataSyncId = "sync-data",
+                        authUser = "1",
+                        useLoginForBrowse = false,
+                    )
+                }
+
+            innerTube.search(YouTubeClient.WEB_REMIX, query = "test")
+
+            val request = engine.requestHistory.single()
+            assertTrue(request.headers[HttpHeaders.Cookie]?.contains("SAPISID=account-secret") == true)
+            assertTrue(request.headers[HttpHeaders.Authorization]?.startsWith("SAPISIDHASH ") == true)
+            assertEquals("1", request.headers["X-Goog-AuthUser"])
+            val body = (request.body as io.ktor.http.content.TextContent).text
+            assertTrue(body.contains("sync-data"))
+        }
+
+    @Test
+    fun searchCanExplicitlyOptOutOfLogin() =
+        runBlocking {
+            val engine = MockEngine { respondOk() }
+            val innerTube =
+                clientWithContentNegotiation(engine).also {
+                    it.replaceSession(
+                        cookie = "SAPISID=account-secret",
+                        visitorData = "visitor-data",
+                        dataSyncId = "sync-data",
+                        authUser = "1",
+                        useLoginForBrowse = true,
+                    )
+                }
+
+            innerTube.search(YouTubeClient.WEB_REMIX, query = "test", setLogin = false)
+
+            val request = engine.requestHistory.single()
+            assertNull(request.headers[HttpHeaders.Cookie])
+            assertNull(request.headers[HttpHeaders.Authorization])
+            assertNull(request.headers["X-Goog-AuthUser"])
+            val body = (request.body as io.ktor.http.content.TextContent).text
+            assertFalse(body.contains("sync-data"))
         }
 
     @Test

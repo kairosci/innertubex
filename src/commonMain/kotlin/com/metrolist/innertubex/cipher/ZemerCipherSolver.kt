@@ -26,7 +26,7 @@ internal class ZemerCipherSolver private constructor(
                 engine.execute("globalThis._yt_player = globalThis._yt_player || {};")
                 engine.execute(buildModifiedPlayerScript(playerCode, config))
 
-                val probe = engine.callFunction("_nTransformFunc", N_PROBE_INPUT)?.toString()
+                val probe = engine.callFunction("_nTransformFunc", N_PROBE_INPUT)
                 check(
                     probe != null &&
                         probe != N_PROBE_INPUT &&
@@ -70,7 +70,7 @@ internal class ZemerCipherSolver private constructor(
         input: String,
     ): String? =
         try {
-            engine.callFunction(functionName, input)?.toString()
+            engine.callFunction(functionName, input)
         } catch (e: CancellationException) {
             throw e
         } catch (_: Exception) {

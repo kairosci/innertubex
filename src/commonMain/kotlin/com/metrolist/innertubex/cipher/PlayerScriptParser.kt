@@ -18,11 +18,8 @@ internal object PlayerScriptParser {
         val helperFunctions: Map<String, String>,
     )
 
-    private val splitJoinFuncPattern =
-        Regex(
-            """(?:var\s+)?([a-zA-Z_$][a-zA-Z0-9_$]*)\s*=\s*function\s*\(\s*a\s*\)\s*\{[^}]*a\s*=\s*a\.split\s*\(\s*""\s*\)[^}]*return\s+a\.join\s*\(\s*""\s*\)""",
-            RegexOption.DOT_MATCHES_ALL,
-        )
+    private val functionPattern =
+        Regex("""(?:var\s+)?([a-zA-Z_$][a-zA-Z0-9_$]*)\s*=\s*function\s*\(\s*a\s*\)\s*\{""")
 
     /**
      * N-parameter transform: first split/join-style function in the player is often (not always) the n-function.
@@ -36,9 +33,9 @@ internal object PlayerScriptParser {
         playerCode: String,
         nCode: String?,
     ): Pair<String?, String?> {
-        val matches = splitJoinFuncPattern.findAll(playerCode).toList()
+        val matches = splitJoinFunctions(playerCode)
         for (i in 1 until matches.size) {
-            val functionName = matches[i].groupValues[1]
+            val functionName = matches[i].name
             val func = extractFunctionByName(playerCode, functionName) ?: continue
             if (func != nCode) return func to functionName
         }
@@ -65,9 +62,9 @@ internal object PlayerScriptParser {
         playerCode: String,
         index: Int,
     ): Pair<String?, String?> {
-        val matches = splitJoinFuncPattern.findAll(playerCode).toList()
+        val matches = splitJoinFunctions(playerCode)
         if (matches.size <= index) return null to null
-        val functionName = matches[index].groupValues[1]
+        val functionName = matches[index].name
         val func = extractFunctionByName(playerCode, functionName) ?: return null to null
         return func to functionName
     }
@@ -143,35 +140,164 @@ internal object PlayerScriptParser {
         startIdx: Int,
     ): Int {
         var braceCount = 0
-        var inString = false
-        var stringChar: Char? = null
+        var state = ScanState.CODE
+        var stringChar = '\u0000'
+        var escaped = false
+        var regexClass = false
+        var skipNext = false
+        var regexAfterControlParenthesis = false
+        val controlParentheses = mutableListOf<Boolean>()
         for (i in startIdx until code.length) {
+            if (skipNext) {
+                skipNext = false
+                continue
+            }
             val char = code[i]
             when {
-                !inString && (char == '"' || char == '\'' || char == '`') -> {
-                    inString = true
+                state == ScanState.LINE_COMMENT -> {
+                    if (char == '\n') state = ScanState.CODE
+                }
+
+                state == ScanState.BLOCK_COMMENT -> {
+                    if (char == '*' && code.getOrNull(i + 1) == '/') {
+                        state = ScanState.CODE
+                        skipNext = true
+                    }
+                }
+
+                state == ScanState.STRING || state == ScanState.TEMPLATE -> {
+                    if (escaped) {
+                        escaped = false
+                    } else if (char == '\\') {
+                        escaped = true
+                    } else if (char == stringChar) {
+                        state = ScanState.CODE
+                    }
+                }
+
+                state == ScanState.REGEX -> {
+                    if (escaped) {
+                        escaped = false
+                    } else if (char == '\\') {
+                        escaped = true
+                    } else if (char == '[') {
+                        regexClass = true
+                    } else if (char == ']') {
+                        regexClass = false
+                    } else if (char == '/' && !regexClass) {
+                        state = ScanState.CODE
+                    }
+                }
+
+                char == '/' && code.getOrNull(i + 1) == '/' -> {
+                    state = ScanState.LINE_COMMENT
+                }
+
+                char == '/' && code.getOrNull(i + 1) == '*' -> {
+                    state = ScanState.BLOCK_COMMENT
+                }
+
+                char == '"' || char == '\'' -> {
+                    state = ScanState.STRING
                     stringChar = char
+                    escaped = false
                 }
 
-                inString && char == stringChar && code.getOrNull(i - 1) != '\\' -> {
-                    inString = false
-                    stringChar = null
+                char == '`' -> {
+                    state = ScanState.TEMPLATE
+                    stringChar = '`'
+                    escaped = false
+                    regexAfterControlParenthesis = false
                 }
 
-                !inString && char == '{' -> {
+                char == '/' && (regexAfterControlParenthesis || looksLikeRegex(code, i)) -> {
+                    state = ScanState.REGEX
+                    escaped = false
+                    regexClass = false
+                    regexAfterControlParenthesis = false
+                }
+
+                char == '(' -> {
+                    controlParentheses += previousIdentifier(code, i) in CONTROL_PARENTHESIS_KEYWORDS
+                    regexAfterControlParenthesis = false
+                }
+
+                char == ')' -> {
+                    regexAfterControlParenthesis = controlParentheses.removeLastOrNull() == true
+                }
+
+                char == '{' -> {
                     braceCount++
+                    regexAfterControlParenthesis = false
                 }
 
-                !inString && char == '}' -> {
+                char == '}' -> {
                     braceCount--
                     if (braceCount == 0) {
                         return i + 1
                     }
+                    regexAfterControlParenthesis = false
+                }
+
+                !char.isWhitespace() -> {
+                    regexAfterControlParenthesis = false
                 }
             }
         }
-        return code.length
+        return -1
     }
+
+    private enum class ScanState { CODE, STRING, TEMPLATE, LINE_COMMENT, BLOCK_COMMENT, REGEX }
+
+    private fun looksLikeRegex(
+        code: String,
+        index: Int,
+    ): Boolean {
+        var i = index - 1
+        while (i >= 0 && code[i].isWhitespace()) i--
+        if (i < 0 || code[i] in "=([{,:;!&|?") return true
+        if (code[i] == '>' && code.getOrNull(i - 1) == '=') return true
+        if (!code[i].isLetterOrDigit() && code[i] !in "_$") return false
+        val end = i + 1
+        while (i >= 0 && (code[i].isLetterOrDigit() || code[i] in "_$")) i--
+        return code.substring(i + 1, end) in REGEX_PREFIX_KEYWORDS
+    }
+
+    private fun previousIdentifier(
+        code: String,
+        index: Int,
+    ): String {
+        var end = index
+        while (end > 0 && code[end - 1].isWhitespace()) end--
+        var start = end
+        while (start > 0 && (code[start - 1].isLetterOrDigit() || code[start - 1] in "_$")) start--
+        return code.substring(start, end)
+    }
+
+    private fun splitJoinFunctions(code: String): List<FunctionMatch> =
+        functionPattern
+            .findAll(code)
+            .mapNotNull { match ->
+                val end = findFunctionEnd(code, match.range.first)
+                if (end <= match.range.first) return@mapNotNull null
+                val body = code.substring(match.range.first, end)
+                if (Regex("""a\s*=\s*a\.split\s*\(\s*""\s*\)""").containsMatchIn(body) &&
+                    Regex("""return\s+a\.join\s*\(\s*""\s*\)""").containsMatchIn(body)
+                ) {
+                    FunctionMatch(match.groupValues[1])
+                } else {
+                    null
+                }
+            }.toList()
+
+    private data class FunctionMatch(
+        val name: String,
+    )
+
+    private val REGEX_PREFIX_KEYWORDS =
+        setOf("await", "case", "delete", "do", "else", "in", "instanceof", "new", "of", "return", "throw", "typeof", "void", "yield")
+
+    private val CONTROL_PARENTHESIS_KEYWORDS = setOf("catch", "for", "if", "switch", "while", "with")
 
     fun generateSolverScript(parseResult: ParseResult): String {
         val sb = StringBuilder()

@@ -9,3 +9,4 @@ out/
 *.jks
 *.asc
 secrets.properties
+innertube_cookie.txt

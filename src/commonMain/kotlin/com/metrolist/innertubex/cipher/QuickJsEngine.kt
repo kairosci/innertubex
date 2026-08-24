@@ -15,6 +15,11 @@ import kotlinx.coroutines.withContext
 internal class QuickJsEngine {
     companion object {
         private const val EVALUATION_TIMEOUT_MS = 10_000L
+        private const val NATIVE_MEMORY_LIMIT_BYTES = 64L * 1024L * 1024L
+        private const val MAX_EVALUATION_RESULT_LENGTH = 16 * 1024 * 1024
+        private const val MAX_FUNCTION_INPUT_LENGTH = 64 * 1024
+        private const val MAX_FUNCTION_RESULT_LENGTH = 256 * 1024
+        private val JS_IDENTIFIER = Regex("[A-Za-z_$][A-Za-z0-9_$]*")
 
         /** Valid JavaScript double-quoted string literal for passing into evaluated calls. */
         internal fun jsStringLiteral(s: String): String =
@@ -68,7 +73,10 @@ internal class QuickJsEngine {
                     quickJs =
                         QuickJs
                             .create(Dispatchers.Default)
-                            .also { it.evaluationTimeoutMillis = EVALUATION_TIMEOUT_MS }
+                            .also {
+                                it.evaluationTimeoutMillis = EVALUATION_TIMEOUT_MS
+                                it.memoryLimit = NATIVE_MEMORY_LIMIT_BYTES
+                            }
                 }
             }
         }
@@ -79,12 +87,24 @@ internal class QuickJsEngine {
      * @param code The JavaScript code to execute
      * @return The result of the execution as a string
      */
-    suspend fun evaluate(code: String): String =
+    suspend fun evaluate(
+        code: String,
+        maxResultLength: Int,
+    ): String =
         withContext(Dispatchers.Default) {
+            require(maxResultLength in 1..MAX_EVALUATION_RESULT_LENGTH) { "Invalid QuickJS result limit" }
             mutex.withLock {
                 val runtime = quickJs ?: throw IllegalStateException("QuickJS not initialized")
-                val result: Any? = runtime.evaluate<Any?>(code)
-                result?.toString() ?: ""
+                val boundedCode =
+                    """
+                    (function() {
+                      const value = ($code);
+                      if (value == null) return "";
+                      const text = String(value);
+                      return text.length <= $maxResultLength ? text : "";
+                    })()
+                    """.trimIndent()
+                runtime.evaluate<String?>(boundedCode).orEmpty()
             }
         }
 
@@ -102,26 +122,29 @@ internal class QuickJsEngine {
      * Execute a JavaScript function with parameters.
      *
      * @param functionName The name of the function to call
-     * @param params The parameters to pass to the function
-     * @return The result of the function call
+     * @param input The string parameter to pass to the function
+     * @return The bounded string result, or null when the input or result is too large
      */
     suspend fun callFunction(
         functionName: String,
-        vararg params: Any?,
-    ): Any? =
+        input: String,
+    ): String? =
         withContext(Dispatchers.Default) {
+            require(JS_IDENTIFIER.matches(functionName)) { "Invalid JavaScript function name" }
+            if (input.length > MAX_FUNCTION_INPUT_LENGTH) return@withContext null
             mutex.withLock {
                 val runtime = quickJs ?: throw IllegalStateException("QuickJS not initialized")
-                val paramsStr =
-                    params.joinToString(", ") { param ->
-                        when (param) {
-                            is String -> jsStringLiteral(param)
-                            is Number -> param.toString()
-                            null -> "null"
-                            else -> param.toString()
-                        }
-                    }
-                runtime.evaluate("$functionName($paramsStr)")
+                val inputLiteral = jsStringLiteral(input)
+                runtime.evaluate<String?>(
+                    """
+                    (function() {
+                      const value = $functionName($inputLiteral);
+                      if (value == null) return null;
+                      const text = String(value);
+                      return text.length <= $MAX_FUNCTION_RESULT_LENGTH ? text : null;
+                    })()
+                    """.trimIndent(),
+                )
             }
         }
 

@@ -9,8 +9,10 @@ import io.ktor.client.request.header
 import io.ktor.http.HttpHeaders
 import io.ktor.http.Url
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.withContext
 import kotlin.time.Clock
 
 /**
@@ -99,14 +101,14 @@ class RemotePlayerConfigStore(
     internal suspend fun forceRefresh(missingHash: String? = null): Boolean {
         if (!repository.enabled) return false
         val sourceUrl = configuredUrl() ?: return false
-        val now = Clock.System.now().toEpochMilliseconds()
         if (missingHash != null && isKnownHash(missingHash, sourceUrl)) return false
-        if (withinCooldown(lastUnknownHashRefreshSourceUrl, lastUnknownHashRefreshAtMs, sourceUrl, now)) {
-            return false
+        val reservation = reserveUnknownHashRefresh(sourceUrl) ?: return false
+        return try {
+            refresh(sourceUrl, force = true)
+        } catch (e: CancellationException) {
+            withContext(NonCancellable) { releaseUnknownHashRefresh(sourceUrl, reservation) }
+            throw e
         }
-        lastUnknownHashRefreshSourceUrl = sourceUrl
-        lastUnknownHashRefreshAtMs = now
-        return refresh(sourceUrl, force = true)
     }
 
     /**
@@ -117,13 +119,59 @@ class RemotePlayerConfigStore(
     internal suspend fun refreshAfterStreamRejection(): Boolean {
         if (!repository.enabled) return false
         val sourceUrl = configuredUrl() ?: return false
-        val now = Clock.System.now().toEpochMilliseconds()
-        if (withinCooldown(lastStreamRejectionRefreshSourceUrl, lastStreamRejectionRefreshAtMs, sourceUrl, now)) {
-            return false
+        val reservation = reserveStreamRejectionRefresh(sourceUrl) ?: return false
+        return try {
+            refresh(sourceUrl, force = true)
+        } catch (e: CancellationException) {
+            withContext(NonCancellable) { releaseStreamRejectionRefresh(sourceUrl, reservation) }
+            throw e
         }
-        lastStreamRejectionRefreshSourceUrl = sourceUrl
-        lastStreamRejectionRefreshAtMs = now
-        return refresh(sourceUrl, force = true)
+    }
+
+    private suspend fun reserveUnknownHashRefresh(sourceUrl: String): Long? =
+        mutex.withLock {
+            val now = Clock.System.now().toEpochMilliseconds()
+            if (withinCooldown(lastUnknownHashRefreshSourceUrl, lastUnknownHashRefreshAtMs, sourceUrl, now)) {
+                return@withLock null
+            }
+            lastUnknownHashRefreshSourceUrl = sourceUrl
+            lastUnknownHashRefreshAtMs = now
+            now
+        }
+
+    private suspend fun reserveStreamRejectionRefresh(sourceUrl: String): Long? =
+        mutex.withLock {
+            val now = Clock.System.now().toEpochMilliseconds()
+            if (withinCooldown(lastStreamRejectionRefreshSourceUrl, lastStreamRejectionRefreshAtMs, sourceUrl, now)) {
+                return@withLock null
+            }
+            lastStreamRejectionRefreshSourceUrl = sourceUrl
+            lastStreamRejectionRefreshAtMs = now
+            now
+        }
+
+    private suspend fun releaseUnknownHashRefresh(
+        sourceUrl: String,
+        reservedAt: Long,
+    ) {
+        mutex.withLock {
+            if (lastUnknownHashRefreshSourceUrl == sourceUrl && lastUnknownHashRefreshAtMs == reservedAt) {
+                lastUnknownHashRefreshSourceUrl = null
+                lastUnknownHashRefreshAtMs = 0L
+            }
+        }
+    }
+
+    private suspend fun releaseStreamRejectionRefresh(
+        sourceUrl: String,
+        reservedAt: Long,
+    ) {
+        mutex.withLock {
+            if (lastStreamRejectionRefreshSourceUrl == sourceUrl && lastStreamRejectionRefreshAtMs == reservedAt) {
+                lastStreamRejectionRefreshSourceUrl = null
+                lastStreamRejectionRefreshAtMs = 0L
+            }
+        }
     }
 
     private suspend fun refresh(
@@ -266,7 +314,9 @@ class RemotePlayerConfigStore(
         previousAtMs: Long,
         sourceUrl: String,
         now: Long,
-    ): Boolean = previousSourceUrl == sourceUrl && now - previousAtMs in 0 until FAILURE_REFRESH_COOLDOWN_MS
+    ): Boolean =
+        previousSourceUrl == sourceUrl &&
+            (now <= previousAtMs || now - previousAtMs < FAILURE_REFRESH_COOLDOWN_MS)
 
     private fun ensureLoadedFromCache(sourceUrl: String) {
         if (configSourceUrl == sourceUrl && configs.isNotEmpty()) return

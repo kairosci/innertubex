@@ -36,13 +36,9 @@ dependencies {
 ```kotlin
 val client = InnerTube(
     httpClient = HttpClient(OkHttp),
-    locale = YouTubeLocale(
-        hl = Locale.getDefault().toLanguageTag(),
-        gl = Locale.getDefault().country,
-    ),
 )
 
-val response = client.search("query").body<SearchResponse>()
+val response = client.search(YouTubeClient.WEB, query = "query").body<SearchResponse>()
 client.close()
 ```
 

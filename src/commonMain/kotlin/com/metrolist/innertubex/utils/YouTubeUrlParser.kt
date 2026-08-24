@@ -1,6 +1,7 @@
 package com.metrolist.innertubex.utils
 
 import com.metrolist.innertubex.models.WatchEndpoint
+import io.ktor.http.Url
 
 object YouTubeUrlParser {
     sealed class ParsedUrl {
@@ -23,64 +24,51 @@ object YouTubeUrlParser {
         ) : ParsedUrl()
     }
 
-    private val VIDEO_URL_PATTERNS =
-        listOf(
-            Regex("""(?:https?://)?(?:www\.)?(?:music\.)?youtube\.com/watch\?.*v=([a-zA-Z0-9_-]{11})"""),
-            Regex("""(?:https?://)?(?:www\.)?(?:music\.)?youtube\.com/watch\?v=([a-zA-Z0-9_-]{11})"""),
-            Regex("""(?:https?://)?youtu\.be/([a-zA-Z0-9_-]{11})"""),
-            Regex("""(?:https?://)?(?:www\.)?youtube\.com/shorts/([a-zA-Z0-9_-]{11})"""),
-        )
-
-    private val PLAYLIST_URL_PATTERN =
-        Regex("""(?:https?://)?(?:www\.)?(?:music\.)?youtube\.com/playlist\?.*list=([a-zA-Z0-9_-]+)""")
-
-    private val ALBUM_BROWSE_URL_PATTERN =
-        Regex("""(?:https?://)?(?:www\.)?music\.youtube\.com/browse/(MPRE[a-zA-Z0-9_-]+)""")
-
-    private val ARTIST_URL_PATTERNS =
-        listOf(
-            Regex("""(?:https?://)?(?:www\.)?music\.youtube\.com/channel/([a-zA-Z0-9_-]+)"""),
-        )
+    private val youtubeHosts = setOf("youtube.com", "www.youtube.com", "music.youtube.com", "www.music.youtube.com")
+    private val musicHosts = setOf("music.youtube.com", "www.music.youtube.com")
+    private val videoId = Regex("[a-zA-Z0-9_-]{11}")
+    private val playlistId = Regex("[a-zA-Z0-9_-]+")
+    private val artistId = Regex("[a-zA-Z0-9_-]+")
 
     fun isYouTubeUrl(text: String): Boolean = parse(text) != null
 
     fun parse(url: String): ParsedUrl? {
-        val trimmedUrl = url.trim()
+        val parsed = parseUrl(url) ?: return null
+        val path = parsed.encodedPath
+        val host = parsed.host
 
-        for (pattern in VIDEO_URL_PATTERNS) {
-            pattern.find(trimmedUrl)?.let { matchResult ->
-                matchResult.groupValues.getOrNull(1)?.let { videoId ->
-                    return ParsedUrl.Video(videoId)
-                }
-            }
+        if (host == "youtu.be") {
+            val id = path.removePrefix("/").takeIf { it.matches(videoId) }
+            return id?.let(::video)
         }
+        if (host !in youtubeHosts) return null
 
-        PLAYLIST_URL_PATTERN.find(trimmedUrl)?.let { matchResult ->
-            matchResult.groupValues.getOrNull(1)?.let { playlistId ->
-                return if (trimmedUrl.contains("music.youtube.com") && playlistId.isAlbumLikeId()) {
-                    ParsedUrl.Album(playlistId)
+        if (path == "/watch") {
+            return parsed.parameters["v"]?.takeIf { it.matches(videoId) }?.let(::video)
+        }
+        if (path.startsWith("/shorts/")) {
+            val id = path.removePrefix("/shorts/").takeIf { it.matches(videoId) }
+            return id?.let(::video)
+        }
+        if (path == "/playlist") {
+            val id = parsed.parameters["list"]?.takeIf { it.matches(playlistId) }
+            return id?.let {
+                if (host in musicHosts && it.isAlbumLikeId()) {
+                    ParsedUrl.Album(it)
                 } else {
-                    ParsedUrl.Playlist(playlistId)
+                    ParsedUrl.Playlist(it)
                 }
             }
         }
-
-        if (trimmedUrl.contains("music.youtube.com")) {
-            ALBUM_BROWSE_URL_PATTERN.find(trimmedUrl)?.let { matchResult ->
-                matchResult.groupValues.getOrNull(1)?.let { albumId ->
-                    return ParsedUrl.Album(albumId)
-                }
-            }
-
-            for (pattern in ARTIST_URL_PATTERNS) {
-                pattern.find(trimmedUrl)?.let { matchResult ->
-                    matchResult.groupValues.getOrNull(1)?.let { artistId ->
-                        return ParsedUrl.Artist(artistId)
-                    }
-                }
-            }
+        if (host !in musicHosts) return null
+        if (path.startsWith("/browse/")) {
+            val id = path.removePrefix("/browse/").takeIf { it.startsWith("MPRE") && it.matches(playlistId) }
+            return id?.let(ParsedUrl::Album)
         }
-
+        if (path.startsWith("/channel/")) {
+            val id = path.removePrefix("/channel/").takeIf { it.matches(artistId) }
+            return id?.let(ParsedUrl::Artist)
+        }
         return null
     }
 
@@ -93,10 +81,20 @@ object YouTubeUrlParser {
             else -> null
         }
 
-    fun createWatchEndpoint(url: String): WatchEndpoint? =
-        extractVideoId(url)?.let { videoId ->
-            WatchEndpoint(videoId = videoId)
-        }
+    fun createWatchEndpoint(url: String): WatchEndpoint? = extractVideoId(url)?.let(::WatchEndpoint)
+
+    private fun parseUrl(value: String): Url? {
+        val input = value.trim()
+        if (input.isEmpty() || input.any(Char::isWhitespace)) return null
+        val candidate = if (input.startsWith("https://") || input.startsWith("http://")) input else "https://$input"
+        return runCatching { Url(candidate) }
+            .getOrNull()
+            ?.takeIf { it.protocol.name in setOf("http", "https") && !it.hasUserInfo() }
+    }
+
+    private fun Url.hasUserInfo(): Boolean = user != null || password != null
+
+    private fun video(id: String) = ParsedUrl.Video(id)
 
     private fun String.isAlbumLikeId(): Boolean = startsWith("OLAK5uy_") || startsWith("MPRE")
 }

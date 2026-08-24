@@ -107,6 +107,62 @@ class SabrCoreTest {
     }
 
     @Test
+    fun protobufRejectsMalformedVarintsAndFieldNumbers() {
+        assertFailsWith<SabrProtocolException> {
+            ProtoReader(ByteArray(10) { if (it < 9) 0x80.toByte() else 0x02 }).varint()
+        }
+        assertFailsWith<SabrProtocolException> {
+            SabrProtoCodec.decodeMediaHeader(byteArrayOf(0x08, 0x81.toByte(), 0x80.toByte(), 0x80.toByte(), 0x80.toByte(), 0x10))
+        }
+        assertFailsWith<SabrProtocolException> {
+            SabrProtoCodec.decodeMediaHeader(byteArrayOf(0x0a, 0x01, 0x18, 0x01))
+        }
+        assertFailsWith<SabrProtocolException> { ProtoReader(byteArrayOf(0x01, 0)).tag() }
+        assertFailsWith<SabrProtocolException> {
+            ProtoReader(byteArrayOf(0x80.toByte(), 0x80.toByte(), 0x80.toByte(), 0x80.toByte(), 0x10)).tag()
+        }
+        assertFailsWith<SabrProtocolException> {
+            ProtoReader(byteArrayOf(0xc0.toByte(), 0xa3.toByte(), 0x09)).tag()
+        }
+    }
+
+    @Test
+    fun protobufDecodersRejectWrongWireTypesAndIntOverflows() {
+        assertFailsWith<SabrProtocolException> {
+            SabrProtoCodec.decodeFormatInitialization(byteArrayOf(0x10, 0x00))
+        }
+        assertFailsWith<SabrProtocolException> {
+            SabrProtoCodec.decodeError(byteArrayOf(0x10, 0x80.toByte(), 0x80.toByte(), 0x80.toByte(), 0x80.toByte(), 0x10))
+        }
+        assertFailsWith<SabrProtocolException> {
+            SabrProtoCodec.decodeContextUpdate(byteArrayOf(0x18, 0x00))
+        }
+        assertFailsWith<SabrProtocolException> {
+            SabrProtoCodec.decodeStreamProtectionStatus(byteArrayOf(0x10, 0x80.toByte(), 0x80.toByte(), 0x80.toByte(), 0x80.toByte(), 0x10))
+        }
+        assertFailsWith<SabrProtocolException> {
+            SabrProtoCodec.decodeContextSendingPolicy(byteArrayOf(0x08, 0x80.toByte(), 0x80.toByte(), 0x80.toByte(), 0x80.toByte(), 0x10))
+        }
+        assertFailsWith<SabrProtocolException> {
+            SabrProtoCodec.decodeFormatInitialization(
+                byteArrayOf(
+                    0x18,
+                    0xff.toByte(),
+                    0xff.toByte(),
+                    0xff.toByte(),
+                    0xff.toByte(),
+                    0xff.toByte(),
+                    0xff.toByte(),
+                    0xff.toByte(),
+                    0xff.toByte(),
+                    0xff.toByte(),
+                    0x01,
+                ),
+            )
+        }
+    }
+
+    @Test
     fun umpReaderHandlesEveryPossibleChunkBoundary() {
         val encoded =
             umpPart(20, byteArrayOf(1, 2)) +

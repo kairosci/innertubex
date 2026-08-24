@@ -32,6 +32,13 @@ internal class EjsChallengeSolver(
     companion object {
         private const val TAG = "EjsChallengeSolver"
         private const val MAX_PREPROCESSED_PLAYERS = 4
+        private const val MAX_PLAYER_JS_LENGTH = 8 * 1024 * 1024
+        private const val MAX_CHALLENGE_LENGTH = 64 * 1024
+        private const val MAX_CHALLENGES = 256
+        private const val MAX_CHALLENGE_PAYLOAD_LENGTH = 8 * 1024 * 1024
+        private const val MAX_PAYLOAD_LENGTH = 10 * 1024 * 1024
+        private const val MAX_RAW_OUTPUT_LENGTH = 10 * 1024 * 1024
+        private const val MAX_SOLVER_OUTPUT_LENGTH = 256 * 1024
         private val payloadJson = Json { encodeDefaults = false }
     }
 
@@ -56,7 +63,7 @@ internal class EjsChallengeSolver(
         playerUrl: String,
         preprocessedPlayer: String,
     ) {
-        if (preprocessedPlayer.isBlank()) return
+        if (preprocessedPlayer.isBlank() || preprocessedPlayer.length > MAX_PLAYER_JS_LENGTH) return
         preprocessedMutex.withLock {
             putPreprocessedPlayerLocked(playerUrl, preprocessedPlayer)
         }
@@ -88,6 +95,14 @@ internal class EjsChallengeSolver(
         preferPreprocessed: Boolean = true,
     ): SolveResult {
         if (requestOrder.isEmpty() || requestOrder.all { it.second.isEmpty() }) {
+            return SolveResult(emptyMap(), emptyMap(), null)
+        }
+        if (fullPlayerJs.length > MAX_PLAYER_JS_LENGTH ||
+            requestOrder.sumOf { it.second.size } > MAX_CHALLENGES ||
+            requestOrder.sumOf { (_, challenges) -> challenges.sumOf { it.length.toLong() } } >
+            MAX_CHALLENGE_PAYLOAD_LENGTH ||
+            requestOrder.any { (_, challenges) -> challenges.any { it.length > MAX_CHALLENGE_LENGTH } }
+        ) {
             return SolveResult(emptyMap(), emptyMap(), null)
         }
 
@@ -130,6 +145,7 @@ internal class EjsChallengeSolver(
                 }
 
             val jsonText = payloadJson.encodeToString(JsonElement.serializer(), payload)
+            if (jsonText.length > MAX_PAYLOAD_LENGTH) return SolveResult(emptyMap(), emptyMap(), null)
             val payloadLit = QuickJsEngine.jsStringLiteral(jsonText)
             // jsc() may return objects QuickJS JSON.stringify cannot handle (circular refs);
             // copy only plain string fields into a new tree before stringify.
@@ -144,8 +160,11 @@ internal class EjsChallengeSolver(
                   if (r.type !== "result")
                     return JSON.stringify({"type":"error","error":"unexpected jsc type: "+String(r.type)});
                   var out = {"type":"result","responses":[]};
-                  if (typeof r.preprocessed_player === "string" && r.preprocessed_player.length > 0)
+                  if (typeof r.preprocessed_player === "string" && r.preprocessed_player.length > 0) {
+                    if (r.preprocessed_player.length > $MAX_PLAYER_JS_LENGTH)
+                      return JSON.stringify({"type":"error","error":"preprocessed player too large"});
                     out.preprocessed_player = r.preprocessed_player;
+                  }
                   var resps = r.responses;
                   if (!resps) return JSON.stringify(out);
                   for (var i = 0; i < resps.length; i++) {
@@ -167,10 +186,18 @@ internal class EjsChallengeSolver(
                         for (var j = 0; j < keys.length; j++) {
                           var k = keys[j];
                           var v = d[k];
-                          plain[k] = v == null ? "" : String(v);
+                          var text = v == null ? "" : String(v);
+                          if (text.length > $MAX_SOLVER_OUTPUT_LENGTH) {
+                            plain = null;
+                            break;
+                          }
+                          plain[k] = text;
                         }
                       }
-                      out.responses.push({"type":"result","data":plain});
+                      if (plain == null)
+                        out.responses.push({"type":"error","error":"solver output too large"});
+                      else
+                        out.responses.push({"type":"result","data":plain});
                     } else {
                       out.responses.push({"type":"error","error":"unknown response type"});
                     }
@@ -179,7 +206,9 @@ internal class EjsChallengeSolver(
                 })()
                 """.trimIndent()
             val evaluateStartMs = Clock.System.now().toEpochMilliseconds()
-            val raw = engine.evaluate(js).trim()
+            val evaluated = engine.evaluate(js, MAX_RAW_OUTPUT_LENGTH)
+            if (evaluated.length > MAX_RAW_OUTPUT_LENGTH) return SolveResult(emptyMap(), emptyMap(), null)
+            val raw = evaluated.trim()
             logger.d(
                 TAG,
                 "EJS evaluate done preprocessed=${preprocessed != null} requests=${requestOrder.sumOf {
@@ -214,7 +243,11 @@ internal class EjsChallengeSolver(
         }
 
         val preprocessed =
-            root["preprocessed_player"]?.jsonPrimitive?.contentOrNull?.takeIf { it.isNotBlank() }
+            root["preprocessed_player"]
+                ?.jsonPrimitive
+                ?.contentOrNull
+                ?.takeIf { it.isNotBlank() }
+                ?.takeIf { it.length <= MAX_PLAYER_JS_LENGTH }
         if (preprocessed != null) {
             preprocessedMutex.withLock { putPreprocessedPlayerLocked(playerUrl, preprocessed) }
         }
@@ -237,9 +270,14 @@ internal class EjsChallengeSolver(
                 "result" -> {
                     val dataObj = resp["data"]?.jsonObject ?: return@forEachIndexed
                     val m =
-                        dataObj.entries.associate { entry ->
-                            entry.key to entry.value.jsonPrimitive.content
-                        }
+                        dataObj.entries
+                            .associate { entry ->
+                                entry.key to
+                                    entry.value.jsonPrimitive.content.takeIf {
+                                        it.isNotBlank() && it.length <= MAX_SOLVER_OUTPUT_LENGTH
+                                    }
+                            }.filterValues { it != null }
+                            .mapValues { it.value!! }
                     when (kind) {
                         "sig" -> sigMap.putAll(m)
                         "n" -> nMap.putAll(m)

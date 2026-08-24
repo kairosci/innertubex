@@ -87,21 +87,79 @@ internal object SabrProtoCodec {
         while (reader.hasRemaining) {
             val tag = reader.tag()
             when (tag.field) {
-                1 -> headerId = reader.varint().toInt()
-                2 -> videoId = reader.string()
-                3 -> formatId = formatId.copy(itag = reader.varint().toInt())
-                4 -> formatId = formatId.copy(lastModified = reader.varint())
-                5 -> formatId = formatId.copy(xtags = reader.string())
-                6 -> startRange = reader.varint()
-                7 -> compressionAlgorithm = reader.varint().toInt()
-                8 -> isInitSegment = reader.bool()
-                9 -> sequenceNumber = reader.varint().toInt()
-                11 -> startMs = reader.varint()
-                12 -> durationMs = reader.varint()
-                13 -> formatId = decodeFormatId(reader.bytes())
-                14 -> contentLength = reader.varint()
-                15 -> timeRange = decodeTimeRange(reader.bytes())
-                else -> reader.skip(tag)
+                1 -> {
+                    tag.requireWireType(0)
+                    headerId = reader.intValue(255)
+                }
+
+                2 -> {
+                    tag.requireWireType(2)
+                    videoId = reader.string()
+                }
+
+                3 -> {
+                    tag.requireWireType(0)
+                    formatId = formatId.copy(itag = reader.intValue())
+                }
+
+                4 -> {
+                    tag.requireWireType(0)
+                    formatId = formatId.copy(lastModified = reader.unsignedValue())
+                }
+
+                5 -> {
+                    tag.requireWireType(2)
+                    formatId = formatId.copy(xtags = reader.string())
+                }
+
+                6 -> {
+                    tag.requireWireType(0)
+                    startRange = reader.unsignedValue()
+                }
+
+                7 -> {
+                    tag.requireWireType(0)
+                    compressionAlgorithm = reader.intValue()
+                }
+
+                8 -> {
+                    tag.requireWireType(0)
+                    isInitSegment = reader.bool()
+                }
+
+                9 -> {
+                    tag.requireWireType(0)
+                    sequenceNumber = reader.intValue()
+                }
+
+                11 -> {
+                    tag.requireWireType(0)
+                    startMs = reader.unsignedValue()
+                }
+
+                12 -> {
+                    tag.requireWireType(0)
+                    durationMs = reader.unsignedValue()
+                }
+
+                13 -> {
+                    tag.requireWireType(2)
+                    formatId = decodeFormatId(reader.bytes())
+                }
+
+                14 -> {
+                    tag.requireWireType(0)
+                    contentLength = reader.unsignedValue()
+                }
+
+                15 -> {
+                    tag.requireWireType(2)
+                    timeRange = decodeTimeRange(reader.bytes())
+                }
+
+                else -> {
+                    reader.skip(tag)
+                }
             }
         }
         if (headerId !in 0..255) throw SabrProtocolException("Invalid SABR media header ID $headerId")
@@ -136,24 +194,28 @@ internal object SabrProtoCodec {
             val tag = reader.tag()
             when (tag.field) {
                 2 -> {
+                    tag.requireWireType(2)
                     formatId = decodeFormatId(reader.bytes())
                 }
 
                 3 -> {
-                    endTimeMs = reader.varint().takeIf { it >= 0 }
+                    tag.requireWireType(0)
+                    endTimeMs = reader.unsignedValue()
                 }
 
                 4 -> {
-                    val value = reader.varint()
-                    if (value in 0..Int.MAX_VALUE.toLong()) endSegmentNumber = value.toInt()
+                    tag.requireWireType(0)
+                    endSegmentNumber = reader.intValue()
                 }
 
                 9 -> {
-                    durationUnits = reader.varint().takeIf { it >= 0 }
+                    tag.requireWireType(0)
+                    durationUnits = reader.unsignedValue()
                 }
 
                 10 -> {
-                    durationTimescale = reader.varint().takeIf { it in 1..Int.MAX_VALUE.toLong() }
+                    tag.requireWireType(0)
+                    durationTimescale = reader.intValue(min = 1).toLong()
                 }
 
                 else -> {
@@ -181,12 +243,34 @@ internal object SabrProtoCodec {
         while (reader.hasRemaining) {
             val tag = reader.tag()
             when (tag.field) {
-                1 -> targetAudioReadaheadMs = reader.varint()
-                3 -> maxTimeSinceLastRequestMs = reader.varint()
-                4 -> backoffTimeMs = reader.varint()
-                5 -> minAudioReadaheadMs = reader.varint()
-                7 -> playbackCookie = reader.bytes()
-                else -> reader.skip(tag)
+                1 -> {
+                    tag.requireWireType(0)
+                    targetAudioReadaheadMs = reader.unsignedValue()
+                }
+
+                3 -> {
+                    tag.requireWireType(0)
+                    maxTimeSinceLastRequestMs = reader.unsignedValue()
+                }
+
+                4 -> {
+                    tag.requireWireType(0)
+                    backoffTimeMs = reader.unsignedValue()
+                }
+
+                5 -> {
+                    tag.requireWireType(0)
+                    minAudioReadaheadMs = reader.unsignedValue()
+                }
+
+                7 -> {
+                    tag.requireWireType(2)
+                    playbackCookie = reader.bytes()
+                }
+
+                else -> {
+                    reader.skip(tag)
+                }
             }
         }
         if (
@@ -210,7 +294,10 @@ internal object SabrProtoCodec {
         val reader = ProtoReader(data)
         while (reader.hasRemaining) {
             val tag = reader.tag()
-            if (tag.field == 1) return reader.string()
+            if (tag.field == 1) {
+                tag.requireWireType(2)
+                return reader.string()
+            }
             reader.skip(tag)
         }
         return null
@@ -223,9 +310,19 @@ internal object SabrProtoCodec {
         while (reader.hasRemaining) {
             val tag = reader.tag()
             when (tag.field) {
-                1 -> type = reader.string()
-                2 -> code = reader.varint().toInt()
-                else -> reader.skip(tag)
+                1 -> {
+                    tag.requireWireType(2)
+                    type = reader.string()
+                }
+
+                2 -> {
+                    tag.requireWireType(0)
+                    code = reader.intValue()
+                }
+
+                else -> {
+                    reader.skip(tag)
+                }
             }
         }
         return SabrEvent.Error(type, code)
@@ -240,11 +337,29 @@ internal object SabrProtoCodec {
         while (reader.hasRemaining) {
             val tag = reader.tag()
             when (tag.field) {
-                1 -> type = reader.varint().toInt()
-                3 -> value = reader.bytes()
-                4 -> sendByDefault = reader.bool()
-                5 -> writePolicy = reader.varint().toInt()
-                else -> reader.skip(tag)
+                1 -> {
+                    tag.requireWireType(0)
+                    type = reader.intValue()
+                }
+
+                3 -> {
+                    tag.requireWireType(2)
+                    value = reader.bytes()
+                }
+
+                4 -> {
+                    tag.requireWireType(0)
+                    sendByDefault = reader.bool()
+                }
+
+                5 -> {
+                    tag.requireWireType(0)
+                    writePolicy = reader.intValue()
+                }
+
+                else -> {
+                    reader.skip(tag)
+                }
             }
         }
         return value?.let { SabrContext(type, it, sendByDefault, writePolicy) }
@@ -257,9 +372,19 @@ internal object SabrProtoCodec {
         while (reader.hasRemaining) {
             val tag = reader.tag()
             when (tag.field) {
-                1 -> status = reader.varint().toInt()
-                2 -> maxRetries = reader.varint().toInt()
-                else -> reader.skip(tag)
+                1 -> {
+                    tag.requireWireType(0)
+                    status = reader.intValue()
+                }
+
+                2 -> {
+                    tag.requireWireType(0)
+                    maxRetries = reader.intValue()
+                }
+
+                else -> {
+                    reader.skip(tag)
+                }
             }
         }
         return SabrEvent.StreamProtectionStatus(status, maxRetries)
@@ -288,13 +413,14 @@ internal object SabrProtoCodec {
                     if (++entryCount > MAX_CONTEXT_POLICY_ENTRIES) {
                         throw SabrProtocolException("SABR context policy exceeded the entry limit")
                     }
-                    target += packed.varint().toInt()
+                    target += packed.intValue()
                 }
             } else {
+                tag.requireWireType(0)
                 if (++entryCount > MAX_CONTEXT_POLICY_ENTRIES) {
                     throw SabrProtocolException("SABR context policy exceeded the entry limit")
                 }
-                target += reader.varint().toInt()
+                target += reader.intValue()
             }
         }
         return SabrEvent.ContextSendingPolicy(start, stop, discard)
@@ -308,10 +434,24 @@ internal object SabrProtoCodec {
         while (reader.hasRemaining) {
             val tag = reader.tag()
             when (tag.field) {
-                1 -> startTicks = reader.varint()
-                2 -> durationTicks = reader.varint()
-                3 -> timescale = reader.varint()
-                else -> reader.skip(tag)
+                1 -> {
+                    tag.requireWireType(0)
+                    startTicks = reader.unsignedValue()
+                }
+
+                2 -> {
+                    tag.requireWireType(0)
+                    durationTicks = reader.unsignedValue()
+                }
+
+                3 -> {
+                    tag.requireWireType(0)
+                    timescale = reader.intValue(min = 1).toLong()
+                }
+
+                else -> {
+                    reader.skip(tag)
+                }
             }
         }
         if (startTicks < 0 || durationTicks < 0 || timescale !in 1..Int.MAX_VALUE.toLong()) return null
@@ -367,12 +507,45 @@ internal object SabrProtoCodec {
         while (reader.hasRemaining) {
             val tag = reader.tag()
             when (tag.field) {
-                1 -> itag = reader.varint().toInt()
-                2 -> lastModified = reader.varint()
-                3 -> xtags = reader.string()
-                else -> reader.skip(tag)
+                1 -> {
+                    tag.requireWireType(0)
+                    itag = reader.intValue()
+                }
+
+                2 -> {
+                    tag.requireWireType(0)
+                    lastModified = reader.unsignedValue()
+                }
+
+                3 -> {
+                    tag.requireWireType(2)
+                    xtags = reader.string()
+                }
+
+                else -> {
+                    reader.skip(tag)
+                }
             }
         }
         return SabrFormatId(itag, lastModified, xtags)
+    }
+
+    private fun ProtoTag.requireWireType(expected: Int) {
+        if (wireType != expected) throw SabrProtocolException("Unexpected protobuf wire type $wireType for field $field")
+    }
+
+    private fun ProtoReader.unsignedValue(): Long {
+        val value = varint()
+        if (value < 0) throw SabrProtocolException("Protobuf unsigned value exceeds Long")
+        return value
+    }
+
+    private fun ProtoReader.intValue(
+        max: Int = Int.MAX_VALUE,
+        min: Int = 0,
+    ): Int {
+        val value = unsignedValue()
+        if (value !in min.toLong()..max.toLong()) throw SabrProtocolException("Protobuf unsigned value $value does not fit in Int")
+        return value.toInt()
     }
 }

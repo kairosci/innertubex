@@ -11,19 +11,21 @@ data class AccountMenuResponse(
 ) {
     @Serializable
     data class Action(
-        val openPopupAction: OpenPopupAction,
+        val openPopupAction: OpenPopupAction? = null,
     ) {
         @Serializable
         data class OpenPopupAction(
-            val popup: Popup,
+            val popup: Popup? = null,
         ) {
             @Serializable
             data class Popup(
-                val multiPageMenuRenderer: MultiPageMenuRenderer,
+                val multiPageMenuRenderer: MultiPageMenuRenderer? = null,
             ) {
+                val popupContent: PopupContent? = null
+
                 @Serializable
                 data class PopupContent(
-                    val multiPageMenuRenderer: MultiPageMenuRenderer,
+                    val multiPageMenuRenderer: MultiPageMenuRenderer? = null,
                 )
 
                 @Serializable
@@ -32,21 +34,21 @@ data class AccountMenuResponse(
                 ) {
                     @Serializable
                     data class Header(
-                        val activeAccountHeaderRenderer: ActiveAccountHeaderRenderer,
+                        val activeAccountHeaderRenderer: ActiveAccountHeaderRenderer? = null,
                     ) {
                         @Serializable
                         data class ActiveAccountHeaderRenderer(
-                            val accountName: Runs,
+                            val accountName: Runs? = null,
                             val email: Runs? = null,
                             val channelHandle: Runs? = null,
-                            val accountPhoto: Thumbnails,
+                            val accountPhoto: Thumbnails? = null,
                         ) {
                             fun toAccountInfo() =
                                 AccountInfo(
-                                    name = accountName.runs?.firstOrNull()?.text ?: "Unknown",
+                                    name = accountName?.runs?.firstOrNull()?.text ?: "Unknown",
                                     email = email?.runs?.firstOrNull()?.text,
                                     channelHandle = channelHandle?.runs?.firstOrNull()?.text,
-                                    thumbnailUrl = accountPhoto.thumbnails.lastOrNull()?.url,
+                                    thumbnailUrl = accountPhoto?.thumbnails?.lastOrNull()?.url,
                                 )
                         }
                     }

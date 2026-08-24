@@ -68,4 +68,32 @@ class YouTubeCipherServiceTest {
             assertNull(result.single().url)
             assertTrue(engine.requestHistory.isEmpty())
         }
+
+    @Test
+    fun cipherQueryValuesAreEncodedWithoutMovingFragments() {
+        val service = YouTubeCipherService(HttpClient(MockEngine { error("No request expected") }))
+
+        assertEquals(
+            "https://example.googlevideo.com/videoplayback?expire=1&sig=a%26b%2Bc%23d#fragment",
+            service.appendQueryParameter(
+                "https://example.googlevideo.com/videoplayback?expire=1#fragment",
+                "sig",
+                "a&b+c#d",
+            ),
+        )
+        assertNull(service.appendQueryParameter("https://example.test/video", "sig&other", "value"))
+        assertNull(service.appendQueryParameter("https://example.test/video", "sig", ""))
+        assertNull(service.appendQueryParameter("https://example.test/videoplayback", "sig", "value"))
+
+        val url = "https://example.googlevideo.com/videoplayback?n=old&x=1#fragment"
+        val match = Regex("[&?]n=([^&#]+)").find(url)!!
+        assertEquals(
+            "https://example.googlevideo.com/videoplayback?n=a%26b%2Bc&x=1#fragment",
+            service.replaceQueryParameter(url, match, "a&b+c"),
+        )
+
+        val fragmentUrl = "https://example.googlevideo.com/videoplayback?x=1#fragment&n=old"
+        val fragmentMatch = Regex("[&?]n=([^&#]+)").find(fragmentUrl)!!
+        assertNull(service.replaceQueryParameter(fragmentUrl, fragmentMatch, "new"))
+    }
 }
