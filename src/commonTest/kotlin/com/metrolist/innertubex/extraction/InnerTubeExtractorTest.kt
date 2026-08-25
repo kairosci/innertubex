@@ -45,6 +45,10 @@ class InnerTubeExtractorTest {
             assertEquals(251, stream.itag)
             assertEquals("audio/webm", stream.mimeType)
             assertTrue(stream.audioUrl.contains("cpn=abcdefghijklmnop"))
+            assertEquals("Track title", stream.mediaMetadata?.title)
+            assertEquals(60L, stream.mediaMetadata?.durationSeconds)
+            assertEquals(-8.5, stream.perceptualLoudnessDb)
+            assertTrue(!stream.toString().contains("Track title"))
             client.close()
         }
 
@@ -206,6 +210,46 @@ class InnerTubeExtractorTest {
             assertEquals("https://www.youtube.com/api/manifest/hls.m3u8", stream.audioUrl)
             client.close()
         }
+
+    @Test
+    fun hlsManifestCanBeDisabledByCaller() {
+        runBlocking {
+            val response =
+                "{\"playabilityStatus\":{\"status\":\"OK\"},\"streamingData\":{\"hlsManifestUrl\":\"https://www.youtube.com/api/manifest/hls.m3u8\"}}"
+            val client = jsonClient(response)
+            val innerTube = InnerTube(client, retryDelay = {})
+            val extractor =
+                makeExtractor(
+                    client = client,
+                    innerTube = innerTube,
+                    parser = CountingParser(),
+                    cipherService = AudioOnlyCipherService,
+                )
+
+            assertFailsWith<StreamResolveException> {
+                extractor.extract(
+                    "video",
+                    ContentHints(isExplicit = true, isLive = true).withStreamCapabilities(allowHls = false),
+                )
+            }
+            client.close()
+        }
+    }
+
+    @Test
+    fun boundedRangeClientCanBeDisabledByCaller() {
+        runBlocking {
+            val client = jsonClient(DIRECT_RESPONSE)
+
+            assertFailsWith<StreamResolveException> {
+                extractor(client, IosFallback).extract(
+                    "video",
+                    ContentHints(isExplicit = true).withStreamCapabilities(allowBoundedRange = false),
+                )
+            }
+            client.close()
+        }
+    }
 
     @Test
     fun sabrResponseBuildsAudioBootstrap() =
@@ -389,7 +433,7 @@ class InnerTubeExtractorTest {
     private companion object {
         val DIRECT_RESPONSE =
             """
-            {"playabilityStatus":{"status":"OK"},"streamingData":{"adaptiveFormats":[{"itag":251,"url":"https://r.googlevideo.com/videoplayback?expire=9999999999","mimeType":"audio/webm; codecs=\"opus\"","bitrate":128000}]}}
+            {"playabilityStatus":{"status":"OK"},"videoDetails":{"videoId":"video","title":"Track title","author":"Artist","channelId":"channel","lengthSeconds":"60","musicVideoType":"MUSIC_VIDEO_TYPE_ATV","viewCount":"42","thumbnail":{"thumbnails":[{"url":"https://i.ytimg.com/vi/video/default.jpg","width":120,"height":90}]}},"playerConfig":{"audioConfig":{"loudnessDb":-5.0,"perceptualLoudnessDb":-8.5}},"streamingData":{"adaptiveFormats":[{"itag":251,"url":"https://r.googlevideo.com/videoplayback?expire=9999999999","mimeType":"audio/webm; codecs=\"opus\"","bitrate":128000}]}}
             """.trimIndent()
         val VIDEO_RESPONSE =
             """

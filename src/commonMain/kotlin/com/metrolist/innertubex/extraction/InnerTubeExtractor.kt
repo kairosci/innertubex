@@ -562,6 +562,11 @@ class InnerTubeExtractor internal constructor(
 
         for (result in results) {
             val response = result.response
+            val requireBoundedRange = requiresBoundedMediaRange(result.clientName)
+            if (requireBoundedRange && !hints.allowBoundedRange) {
+                logger.d(TAG, "bounded-range client skipped by request", details = mapOf("client" to result.clientName))
+                continue
+            }
             val streamingData = response.streamingData
             if (streamingData == null) {
                 logger.w(TAG, "response missing streaming data", details = mapOf("client" to result.clientName))
@@ -582,6 +587,10 @@ class InnerTubeExtractor internal constructor(
             val isLive = response.videoDetails?.isLiveContent == true
 
             if (result.useSabr) {
+                if (!hints.allowSabr) {
+                    logger.d(TAG, "SABR client skipped by request", details = mapOf("client" to result.clientName))
+                    continue
+                }
                 val audioFormat =
                     selectBestAudioFormat(
                         formats = allFormats.filter(PlayerResponse.StreamingData.Format::isAudio),
@@ -675,7 +684,7 @@ class InnerTubeExtractor internal constructor(
                     videoId = videoId,
                     audioUrl = "sabr://$videoId",
                     headers = emptyMap(),
-                    loudnessDb = audioFormat.loudnessDb,
+                    loudnessDb = response.playerConfig?.audioConfig?.loudnessDb ?: audioFormat.loudnessDb,
                     expiresAt = expiresAt,
                     contentLengthBytes = audioFormat.contentLength,
                     itag = audioFormat.itag,
@@ -700,7 +709,7 @@ class InnerTubeExtractor internal constructor(
                     sabrBootstrap = bootstrap,
                     sabrVideoBootstrap = bootstrap.takeIf { videoFormat != null },
                     availableVideoHeights = availableVideoHeights,
-                )
+                ).withResponseMetadata(response)
             }
 
             val hlsManifestUrl =
@@ -712,6 +721,7 @@ class InnerTubeExtractor internal constructor(
 
             if (
                 !hlsManifestUrl.isNullOrBlank() &&
+                hints.allowHls &&
                 isAllowedHlsUrl(hlsManifestUrl) &&
                 (isLive || allFormats.isEmpty() || needsVideoButNoVideoFormats || result.clientName == "TVHTML5_SIMPLY")
             ) {
@@ -721,7 +731,7 @@ class InnerTubeExtractor internal constructor(
                     audioUrl = hlsManifestUrl,
                     videoUrl = hlsManifestUrl,
                     headers = buildHeaders(result.clientName, result.userAgent),
-                    loudnessDb = null,
+                    loudnessDb = response.playerConfig?.audioConfig?.loudnessDb,
                     expiresAt = null,
                     contentLengthBytes = null,
                     itag = 96,
@@ -736,7 +746,7 @@ class InnerTubeExtractor internal constructor(
                     rangeChunkSizeBytes = mediaRangeChunkSize(result.clientName),
                     playbackTracking = playbackTracking,
                     streamDiagnostics = diagnostics.snapshot(),
-                )
+                ).withResponseMetadata(response)
             }
 
             val directAudioItags =
@@ -776,7 +786,6 @@ class InnerTubeExtractor internal constructor(
                 if (!directUrl.hasNParameter() && directVideoUrl?.hasNParameter() != true) {
                     val expireSeconds = extractExpire(directUrl)
                     val expiresAt = expireSeconds?.let { Instant.fromEpochSeconds(it) }
-                    val requireBoundedRange = requiresBoundedMediaRange(result.clientName)
                     val directHeaders = buildHeaders(result.clientName, result.userAgent)
                     val contentLength =
                         resolveBoundedContentLength(
@@ -821,7 +830,7 @@ class InnerTubeExtractor internal constructor(
                         videoId = videoId,
                         audioUrl = directUrl,
                         headers = directHeaders,
-                        loudnessDb = directFastPathCandidate.loudnessDb,
+                        loudnessDb = response.playerConfig?.audioConfig?.loudnessDb ?: directFastPathCandidate.loudnessDb,
                         expiresAt = expiresAt,
                         contentLengthBytes = contentLength,
                         itag = directFastPathCandidate.itag,
@@ -845,7 +854,7 @@ class InnerTubeExtractor internal constructor(
                         videoItag = directFastPathVideo?.itag,
                         videoContentLengthBytes = videoContentLength,
                         availableVideoHeights = availableVideoHeights,
-                    )
+                    ).withResponseMetadata(response)
                 }
             }
 
@@ -963,7 +972,6 @@ class InnerTubeExtractor internal constructor(
             }
             val expireSeconds = extractExpire(url)
             val expiresAt = expireSeconds?.let { Instant.fromEpochSeconds(it) }
-            val requireBoundedRange = requiresBoundedMediaRange(result.clientName)
             val directHeaders = buildHeaders(result.clientName, result.userAgent)
             val contentLength =
                 resolveBoundedContentLength(
@@ -1010,7 +1018,7 @@ class InnerTubeExtractor internal constructor(
                 videoId = videoId,
                 audioUrl = url,
                 headers = directHeaders,
-                loudnessDb = audioFormat.loudnessDb,
+                loudnessDb = response.playerConfig?.audioConfig?.loudnessDb ?: audioFormat.loudnessDb,
                 expiresAt = expiresAt,
                 contentLengthBytes = contentLength,
                 itag = audioFormat.itag,
@@ -1034,12 +1042,12 @@ class InnerTubeExtractor internal constructor(
                 videoItag = processedVideoFormat?.itag,
                 videoContentLengthBytes = videoContentLength,
                 availableVideoHeights = availableVideoHeights,
-            )
+            ).withResponseMetadata(response)
         }
 
         // Fallback to HLS if no playable direct URLs were found across all clients
         val fallbackResult = results.firstOrNull { it.response.streamingData?.hlsManifestUrl != null }
-        if (fallbackResult != null) {
+        if (hints.allowHls && fallbackResult != null) {
             val hlsManifestUrl =
                 fallbackResult.response.streamingData
                     ?.hlsManifestUrl
@@ -1076,7 +1084,7 @@ class InnerTubeExtractor internal constructor(
                     playbackTracking =
                         fallbackResult.response.playbackTracking.toPlaybackTrackingData(clientPlaybackNonce),
                     streamDiagnostics = diagnostics.snapshot(),
-                )
+                ).withResponseMetadata(fallbackResult.response)
             }
         }
 
@@ -1218,6 +1226,26 @@ class InnerTubeExtractor internal constructor(
             defaultFlushIntervalSeconds = this?.videostatsDefaultFlushIntervalSeconds,
             resolvedAtEpochMs = Clock.System.now().toEpochMilliseconds(),
         )
+
+    private fun ExtractedStream.withResponseMetadata(response: PlayerResponse): ExtractedStream =
+        apply {
+            perceptualLoudnessDb = response.playerConfig?.audioConfig?.perceptualLoudnessDb
+            mediaMetadata = response.toExtractedMediaMetadata()
+        }
+
+    private fun PlayerResponse.toExtractedMediaMetadata(): ExtractedMediaMetadata? =
+        videoDetails?.let { details ->
+            ExtractedMediaMetadata(
+                title = details.title,
+                author = details.author,
+                channelId = details.channelId,
+                durationSeconds = details.lengthSeconds?.toLongOrNull(),
+                musicVideoType = details.musicVideoType,
+                viewCount = details.viewCount,
+                thumbnails = details.thumbnail?.thumbnails.orEmpty(),
+                isLive = details.isLiveContent == true,
+            )
+        }
 
     private fun String.extractCodecs(): String? = Regex("codecs=\"([^\"]+)\"").find(this)?.groupValues?.getOrNull(1)
 

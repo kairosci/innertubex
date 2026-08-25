@@ -6,6 +6,13 @@ that `0.x` releases may contain breaking API changes.
 
 ## [Unreleased]
 
+## [0.2.1] - 2026-08-25
+
+### Added
+
+- Extracted media metadata and perceptual loudness in stream results.
+- Per-request HLS, SABR, and bounded-range capability flags for direct-only hosts.
+
 ## [0.2.0] - 2026-08-25
 
 ### Added

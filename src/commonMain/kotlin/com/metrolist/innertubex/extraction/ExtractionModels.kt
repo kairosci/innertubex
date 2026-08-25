@@ -1,5 +1,6 @@
 package com.metrolist.innertubex.extraction
 
+import com.metrolist.innertubex.models.Thumbnail
 import com.metrolist.innertubex.models.response.PlayerResponse
 import com.metrolist.innertubex.sabr.SabrBootstrap
 import kotlin.time.Instant
@@ -17,6 +18,24 @@ public data class ContentHints(
     val sabrFirst: Boolean = false,
     val maxVideoHeight: Int? = null,
 ) {
+    public var allowHls: Boolean = true
+        private set
+    public var allowSabr: Boolean = true
+        private set
+    public var allowBoundedRange: Boolean = true
+        private set
+
+    public fun withStreamCapabilities(
+        allowHls: Boolean = true,
+        allowSabr: Boolean = true,
+        allowBoundedRange: Boolean = true,
+    ): ContentHints =
+        copy().also {
+            it.allowHls = allowHls
+            it.allowSabr = allowSabr
+            it.allowBoundedRange = allowBoundedRange
+        }
+
     override fun toString(): String = diagnosticSummary()
 }
 
@@ -24,7 +43,8 @@ public fun ContentHints.diagnosticSummary(): String =
     "{explicit=$isExplicit, kids=$isKidsContent, ageRestricted=$isAgeRestricted, " +
         "live=$isLive, uploaded=$isUploaded, local=$isLocal, " +
         "endpointParamsPresent=${endpointParams != null}, wantVideo=$wantVideo, " +
-        "clientOverride=$playbackClientOverrideId, sabrFirst=$sabrFirst, maxVideoHeight=$maxVideoHeight}"
+        "clientOverride=$playbackClientOverrideId, sabrFirst=$sabrFirst, maxVideoHeight=$maxVideoHeight, " +
+        "allowHls=$allowHls, allowSabr=$allowSabr, allowBoundedRange=$allowBoundedRange}"
 
 public data class PlayerConfig(
     val playerUrl: String,
@@ -83,6 +103,29 @@ public data class PlaybackTrackingData(
             "resolvedAtEpochMs=$resolvedAtEpochMs)"
 }
 
+/** Media metadata is sensitive and intentionally redacted from [toString]. */
+public data class ExtractedMediaMetadata(
+    val title: String?,
+    val author: String?,
+    val channelId: String?,
+    val durationSeconds: Long?,
+    val musicVideoType: String?,
+    val viewCount: String?,
+    val thumbnails: List<Thumbnail>,
+    val isLive: Boolean,
+) {
+    override fun toString(): String =
+        "ExtractedMediaMetadata(" +
+            "title=${title.presence()}, " +
+            "author=${author.presence()}, " +
+            "channelId=${channelId.presence()}, " +
+            "durationSeconds=$durationSeconds, " +
+            "musicVideoType=$musicVideoType, " +
+            "viewCount=${viewCount.presence()}, " +
+            "thumbnailCount=${thumbnails.size}, " +
+            "isLive=$isLive)"
+}
+
 /** Signed media URLs and request headers are sensitive and intentionally redacted from [toString]. */
 public data class ExtractedStream(
     val videoId: String,
@@ -115,6 +158,11 @@ public data class ExtractedStream(
     val sabrVideoBootstrap: SabrBootstrap? = null,
     val availableVideoHeights: List<Int> = emptyList(),
 ) {
+    public var perceptualLoudnessDb: Double? = null
+        internal set
+    public var mediaMetadata: ExtractedMediaMetadata? = null
+        internal set
+
     override fun toString(): String =
         "ExtractedStream(" +
             "videoId=${videoId.presence()}, " +
@@ -125,6 +173,7 @@ public data class ExtractedStream(
             "mimeType=$mimeType, " +
             "clientName=$clientName, " +
             "profileId=$profileId, " +
+            "mediaMetadata=${mediaMetadata != null}, " +
             "videoUrl=${videoUrl.presence()}, " +
             "videoItag=$videoItag, " +
             "sabr=${sabrBootstrap != null}, " +

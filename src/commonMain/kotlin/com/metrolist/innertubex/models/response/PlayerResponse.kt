@@ -68,6 +68,15 @@ data class PlayerResponse(
     data class PlayerConfig(
         val mediaCommonConfig: MediaCommonConfig? = null,
     ) {
+        var audioConfig: AudioConfig? = null
+            private set
+
+        @Serializable
+        data class AudioConfig(
+            val loudnessDb: Double? = null,
+            val perceptualLoudnessDb: Double? = null,
+        )
+
         @Serializable
         data class MediaCommonConfig(
             val mediaUstreamerRequestConfig: MediaUstreamerRequestConfig? = null,
