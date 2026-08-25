@@ -7,6 +7,7 @@ import io.ktor.client.engine.mock.MockEngine
 import io.ktor.client.engine.mock.respond
 import io.ktor.client.engine.mock.respondOk
 import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
+import io.ktor.http.ContentType
 import io.ktor.http.HttpHeaders
 import io.ktor.http.HttpStatusCode
 import io.ktor.http.content.OutgoingContent
@@ -320,14 +321,20 @@ class InnerTubeSessionTest {
             val engine = MockEngine { respondOk() }
             val innerTube = InnerTube(HttpClient(engine)).also { it.cookie = "SAPISID=secret" }
 
-            assertFailsWith<IllegalArgumentException> {
-                innerTube.registerPlaybackWithSession(
-                    YouTubeClient.WEB_REMIX,
-                    "https://example.com/api/stats/playback",
-                    "cpn",
-                    null,
-                    innerTube.sessionSnapshot(),
-                )
+            listOf(
+                "https://example.com/api/stats/playback",
+                "https://s.youtube.com:8443/api/stats/playback",
+                "https://s.youtube.com/api/stats/playback/extra",
+            ).forEach { url ->
+                assertFailsWith<IllegalArgumentException> {
+                    innerTube.registerPlaybackWithSession(
+                        YouTubeClient.WEB_REMIX,
+                        url,
+                        "cpn",
+                        null,
+                        innerTube.sessionSnapshot(),
+                    )
+                }
             }
 
             assertTrue(engine.requestHistory.isEmpty())
@@ -511,6 +518,13 @@ class InnerTubeSessionTest {
                 MockEngine { request ->
                     requests++
                     if (requests == 1) {
+                        assertEquals("upload.youtube.com", request.url.host)
+                        assertEquals("/upload/usermusic/http", request.url.encodedPath)
+                        assertEquals("0", request.url.parameters["authuser"])
+                        assertEquals("start", request.headers["X-Goog-Upload-Command"])
+                        assertEquals("resumable", request.headers["X-Goog-Upload-Protocol"])
+                        assertEquals(content.size.toString(), request.headers["X-Goog-Upload-Header-Content-Length"])
+                        assertTrue(request.body.contentType?.match(ContentType.Application.FormUrlEncoded) == true)
                         respond(
                             content = "",
                             status = HttpStatusCode.OK,
@@ -519,8 +533,15 @@ class InnerTubeSessionTest {
                     } else {
                         val body = request.body as OutgoingContent.ReadChannelContent
                         assertEquals(content.size.toLong(), body.contentLength)
+                        assertEquals(ContentType.Application.OctetStream, body.contentType)
+                        assertEquals("upload, finalize", request.headers["X-Goog-Upload-Command"])
+                        assertEquals("0", request.headers["X-Goog-Upload-Offset"])
                         assertTrue(content.contentEquals(body.readFrom().toByteArray()))
-                        respondOk()
+                        respond(
+                            content = "",
+                            status = HttpStatusCode.OK,
+                            headers = headersOf("X-Goog-Upload-Status", "final"),
+                        )
                     }
                 }
             val innerTube = InnerTube(HttpClient(engine))

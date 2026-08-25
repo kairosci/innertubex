@@ -27,7 +27,7 @@ repositories {
 }
 
 dependencies {
-    implementation("com.github.MetrolistGroup.innertubex:innertubex:v0.1.2")
+    implementation("com.github.MetrolistGroup.innertubex:innertubex:v0.2.0")
 }
 ```
 
@@ -47,11 +47,43 @@ library-owned visitor-data work and session-bound requests. Authenticated
 sessions contain sensitive cookies and SAPISID values; follow
 [`SECURITY.md`](SECURITY.md) when storing or logging them.
 
+## Stream Extraction
+
+The reusable extraction stack handles client selection, player configuration,
+cipher transforms, PO-token contracts, direct/HLS/SABR transport selection,
+format selection, and bounded media probing:
+
+```kotlin
+val configStore = RemotePlayerConfigStore(
+    httpClient = client.httpClient,
+    repository = PlayerConfigRepository.disabled(),
+)
+val cipher = YouTubeCipherService(client.httpClient, configStore)
+val extractor: StreamExtractor = InnerTubeExtractor(
+    configParser = YtConfigParserImpl(client.httpClient, client, configStore),
+    cipherService = cipher,
+    innerTube = client,
+)
+
+val stream = extractor.extract(
+    videoId = "dQw4w9WgXcQ",
+    hints = ContentHints(wantVideo = false),
+    audioQuality = AudioQuality.HIGH,
+)
+```
+
+Applications can inject `TokenProvider`, `ClientHealthMonitor`,
+`ClientFallbackStrategy`, and `InnerTubeLogger` implementations. Platform token
+minting, persistence, playback engines, UI, and application settings remain
+host-owned. Never log an `ExtractedStream`, PO-token values, signed URLs, or
+authenticated session fields; library model `toString()` implementations redact
+those values as defense in depth.
+
 ## Development
 
 ```bash
 ./gradlew ktlintFormat
-./gradlew allTests ktlintCheck apiCheck assemble
+./gradlew allTests ktlintCheck apiCheck assemble publishToMavenLocal
 ```
 
 Enable the repository hook with `git config core.hooksPath .githooks`.

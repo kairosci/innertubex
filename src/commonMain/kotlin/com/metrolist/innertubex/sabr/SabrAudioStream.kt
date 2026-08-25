@@ -672,9 +672,9 @@ private class SabrMediaStream(
                 }
             }
         if (notable) {
-            logger.w(tag, message, bootstrap.videoId, diagnostics.logDetails())
+            logger.w(tag, message, details = diagnostics.logDetails())
         } else {
-            logger.d(tag, message, bootstrap.videoId, diagnostics.logDetails())
+            logger.d(tag, message, details = diagnostics.logDetails())
         }
     }
 

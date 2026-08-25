@@ -6,6 +6,31 @@ that `0.x` releases may contain breaking API changes.
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-08-25
+
+### Added
+
+- Reusable player extraction stack with content-aware client selection,
+  format selection, direct/HLS/SABR transport support, PO-token contracts,
+  client-health integration, bounded watch/player parsing, and diagnostics.
+- Platform-neutral BotGuard/page-attestation parsing and transcript/caption
+  helpers for Android and desktop hosts.
+- Public bounded response decoders and hardened cookie normalization helpers.
+
+### Fixed
+
+- Bound player, watch-page, iframe, caption, transcript, token, and sidecar
+  responses before materializing them in memory.
+- Validate media, caption, player-script, SABR, upload, and playback-statistics
+  URLs by HTTPS host, default port, and expected endpoint path.
+- Reject unresolved cipher parameters, incomplete video selections, invalid
+  video media hosts, and bounded-range streams without known lengths.
+- Preserve coroutine cancellation across extraction and playback-recovery
+  fallbacks, and bind player-config caching to the originating session.
+- Redact signed URLs, visitor data, PO tokens, account identifiers, media IDs,
+  and raw exception messages from reusable diagnostics.
+- Restore `application/octet-stream` for finalized song-upload bodies.
+
 ## [0.1.2] - 2026-08-22
 
 ### Added

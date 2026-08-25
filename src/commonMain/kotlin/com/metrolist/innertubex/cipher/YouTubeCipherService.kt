@@ -1011,6 +1011,7 @@ class YouTubeCipherService(
         val url = runCatching { Url(this) }.getOrNull() ?: return false
         val isGoogleVideoHost = url.host == "googlevideo.com" || url.host.endsWith(".googlevideo.com")
         return url.protocol.name == "https" &&
+            url.port == 443 &&
             isGoogleVideoHost &&
             url.encodedPath == "/videoplayback" &&
             url.user == null &&

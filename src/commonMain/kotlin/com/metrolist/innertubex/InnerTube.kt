@@ -107,6 +107,7 @@ class InnerTube(
 
         private val TRANSIENT_STATUS_CODES = setOf(408, 425, 429, 500, 502, 503, 504)
         private val STATS_HOSTS = setOf("s.youtube.com", "www.youtube.com", "music.youtube.com")
+        private val STATS_PATHS = setOf("/api/stats/playback", "/api/stats/watchtime")
         private val MEDIA_REQUEST_HEADERS =
             setOf(
                 HttpHeaders.Accept.lowercase(),
@@ -584,7 +585,7 @@ class InnerTube(
             } else {
                 client
             }
-        return executeRequest(operation = "player:${client.clientName}:$videoId") {
+        return executeRequest(operation = "player:${client.clientName}") {
             val startTime = Clock.System.now().toEpochMilliseconds()
             val hasCookie = !requestSession.cookie.isNullOrBlank()
             val hasSapisid = !requestSession.sapisid.isNullOrBlank()
@@ -593,7 +594,7 @@ class InnerTube(
             logger.d(
                 TAG,
                 "player request client=${client.clientName} version=${client.clientVersion} " +
-                    "videoId=$videoId poToken=${poToken != null} sts=${signatureTimestamp != null} " +
+                    "poToken=${poToken != null} sts=${signatureTimestamp != null} " +
                     "loginSupported=${client.loginSupported} loginRequired=${client.loginRequired} " +
                     "hasCookie=$hasCookie hasSapisid=$hasSapisid authEligible=$authHeaderEligible hasDataSync=$hasDataSync",
             )
@@ -643,7 +644,7 @@ class InnerTube(
                     userAgent(requestClient.userAgent)
                 }
             val elapsed = Clock.System.now().toEpochMilliseconds() - startTime
-            logger.d(TAG, "player response client=${client.clientName} videoId=$videoId elapsed=${elapsed}ms")
+            logger.d(TAG, "player response client=${client.clientName} elapsed=${elapsed}ms")
             response
         }
     }
@@ -869,8 +870,9 @@ class InnerTube(
         val url = Url(value)
         require(
             url.protocol.name == "https" &&
+                url.port == 443 &&
                 url.host in STATS_HOSTS &&
-                url.encodedPath.startsWith("/api/stats/") &&
+                url.encodedPath in STATS_PATHS &&
                 !url.hasUserInfo(),
         ) {
             "Playback statistics URL must use an approved YouTube HTTPS endpoint"
@@ -882,6 +884,7 @@ class InnerTube(
         val url = Url(value)
         require(
             url.protocol.name == "https" &&
+                url.port == 443 &&
                 (url.host == "googlevideo.com" || url.host.endsWith(".googlevideo.com")) &&
                 url.encodedPath == "/videoplayback" &&
                 !url.hasUserInfo(),
@@ -1123,7 +1126,7 @@ class InnerTube(
                     setBody(
                         object : OutgoingContent.ReadChannelContent() {
                             override val contentLength: Long = contentLength
-                            override val contentType: ContentType = ContentType.parse(uploadContentType)
+                            override val contentType: ContentType = ContentType.Application.OctetStream
 
                             override fun readFrom(): ByteReadChannel = content()
                         },
@@ -1137,6 +1140,7 @@ class InnerTube(
         val url = Url(value)
         require(
             url.protocol.name == "https" &&
+                url.port == 443 &&
                 url.host == "upload.youtube.com" &&
                 url.encodedPath.startsWith("/upload/") &&
                 !url.hasUserInfo(),

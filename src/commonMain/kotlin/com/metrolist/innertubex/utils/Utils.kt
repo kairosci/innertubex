@@ -1,6 +1,7 @@
 package com.metrolist.innertubex.utils
 
-internal fun sanitizeCookieString(cookie: String): String {
+/** Normalizes a Cookie-header value without exposing or parsing its sensitive contents. */
+public fun sanitizeCookieString(cookie: String): String {
     val normalized = cookie.filterNot { it == '\r' || it == '\n' || it == '\t' }
     require(normalized.none { it.isISOControl() }) { "Cookie must not contain control characters" }
     return normalized
@@ -9,7 +10,8 @@ internal fun sanitizeCookieString(cookie: String): String {
         .trim()
 }
 
-internal fun parseCookieString(cookie: String): Map<String, String> =
+/** Parses a normalized Cookie-header value. The returned names and values remain sensitive. */
+public fun parseCookieString(cookie: String): Map<String, String> =
     sanitizeCookieString(cookie).split(";").map { it.trim() }.filter { it.isNotEmpty() }.associate {
         val parts = it.split("=", limit = 2)
         val rawKey = parts.getOrNull(0)?.trim() ?: ""
@@ -22,4 +24,6 @@ private fun String.removePrefixIgnoreCase(prefix: String): String =
     if (startsWith(prefix, ignoreCase = true)) substring(prefix.length) else this
 
 // Expect declaration for platform-specific SHA-1 implementation
-internal expect fun sha1(input: String): String
+
+/** SHA-1 compatibility hash. Do not use for passwords, signatures, or security decisions. */
+public expect fun sha1(input: String): String

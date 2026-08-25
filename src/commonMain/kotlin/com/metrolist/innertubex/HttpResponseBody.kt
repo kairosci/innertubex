@@ -6,7 +6,8 @@ import io.ktor.http.contentLength
 import io.ktor.utils.io.cancel
 import io.ktor.utils.io.readAvailable
 
-internal suspend fun HttpResponse.bodyAsTextLimited(maxBytes: Int): String {
+/** Reads a response body while enforcing a byte limit before and during streaming. */
+public suspend fun HttpResponse.bodyAsTextLimited(maxBytes: Int): String {
     require(maxBytes > 0) { "Maximum response size must be positive" }
     val channel = bodyAsChannel()
     val declaredLength = contentLength()

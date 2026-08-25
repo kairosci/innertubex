@@ -1,3 +1,13 @@
+public final class com/metrolist/innertubex/CaptionsKt {
+	public static final fun bodyAsJsonObjectLimited (Lio/ktor/client/statement/HttpResponse;ILkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public static final fun fetchCaptionText (Lcom/metrolist/innertubex/InnerTube;Ljava/lang/String;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public static final fun transcriptCues (Lcom/metrolist/innertubex/InnerTube;Lcom/metrolist/innertubex/models/YouTubeClient;Ljava/lang/String;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+}
+
+public final class com/metrolist/innertubex/HttpResponseBodyKt {
+	public static final fun bodyAsTextLimited (Lio/ktor/client/statement/HttpResponse;ILkotlin/coroutines/Continuation;)Ljava/lang/Object;
+}
+
 public final class com/metrolist/innertubex/InnerTube {
 	public fun <init> (Lio/ktor/client/HttpClient;Lkotlin/jvm/functions/Function2;Lcom/metrolist/innertubex/InnerTubeLogger;)V
 	public synthetic fun <init> (Lio/ktor/client/HttpClient;Lkotlin/jvm/functions/Function2;Lcom/metrolist/innertubex/InnerTubeLogger;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
@@ -154,7 +164,23 @@ public final class com/metrolist/innertubex/InnerTubeLogger$Companion {
 	public final fun getNONE ()Lcom/metrolist/innertubex/InnerTubeLogger;
 }
 
+public final class com/metrolist/innertubex/TranscriptCue {
+	public fun <init> (Ljava/lang/String;JJ)V
+	public final fun component1 ()Ljava/lang/String;
+	public final fun component2 ()J
+	public final fun component3 ()J
+	public final fun copy (Ljava/lang/String;JJ)Lcom/metrolist/innertubex/TranscriptCue;
+	public static synthetic fun copy$default (Lcom/metrolist/innertubex/TranscriptCue;Ljava/lang/String;JJILjava/lang/Object;)Lcom/metrolist/innertubex/TranscriptCue;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getDurationMs ()J
+	public final fun getStartMs ()J
+	public final fun getText ()Ljava/lang/String;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
 public abstract interface class com/metrolist/innertubex/cipher/PlayerConfigRepository {
+	public static final field Companion Lcom/metrolist/innertubex/cipher/PlayerConfigRepository$Companion;
 	public abstract fun getCachedAtMs ()J
 	public abstract fun getCachedEtag ()Ljava/lang/String;
 	public abstract fun getCachedJson ()Ljava/lang/String;
@@ -166,6 +192,10 @@ public abstract interface class com/metrolist/innertubex/cipher/PlayerConfigRepo
 	public abstract fun setCachedEtag (Ljava/lang/String;)V
 	public abstract fun setCachedJson (Ljava/lang/String;)V
 	public abstract fun setCachedSourceUrl (Ljava/lang/String;)V
+}
+
+public final class com/metrolist/innertubex/cipher/PlayerConfigRepository$Companion {
+	public final fun disabled ()Lcom/metrolist/innertubex/cipher/PlayerConfigRepository;
 }
 
 public final class com/metrolist/innertubex/cipher/RemotePlayerConfigStore {
@@ -186,6 +216,791 @@ public final class com/metrolist/innertubex/cipher/YouTubeCipherService {
 	public final fun processNParameter (Ljava/lang/String;Ljava/lang/String;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
 	public final fun refreshAfterStreamRejection (Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
 	public final fun refreshForUnknownPlayer (Ljava/lang/String;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+}
+
+public final class com/metrolist/innertubex/extraction/AudioQuality : java/lang/Enum {
+	public static final field AUTO Lcom/metrolist/innertubex/extraction/AudioQuality;
+	public static final field HIGH Lcom/metrolist/innertubex/extraction/AudioQuality;
+	public static final field LOW Lcom/metrolist/innertubex/extraction/AudioQuality;
+	public static fun getEntries ()Lkotlin/enums/EnumEntries;
+	public static fun valueOf (Ljava/lang/String;)Lcom/metrolist/innertubex/extraction/AudioQuality;
+	public static fun values ()[Lcom/metrolist/innertubex/extraction/AudioQuality;
+}
+
+public final class com/metrolist/innertubex/extraction/ContentHints {
+	public fun <init> ()V
+	public fun <init> (Ljava/lang/Boolean;Ljava/lang/Boolean;Ljava/lang/Boolean;Ljava/lang/Boolean;Ljava/lang/Boolean;Ljava/lang/Boolean;Ljava/lang/String;ZLjava/lang/String;ZLjava/lang/Integer;)V
+	public synthetic fun <init> (Ljava/lang/Boolean;Ljava/lang/Boolean;Ljava/lang/Boolean;Ljava/lang/Boolean;Ljava/lang/Boolean;Ljava/lang/Boolean;Ljava/lang/String;ZLjava/lang/String;ZLjava/lang/Integer;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1 ()Ljava/lang/Boolean;
+	public final fun component10 ()Z
+	public final fun component11 ()Ljava/lang/Integer;
+	public final fun component2 ()Ljava/lang/Boolean;
+	public final fun component3 ()Ljava/lang/Boolean;
+	public final fun component4 ()Ljava/lang/Boolean;
+	public final fun component5 ()Ljava/lang/Boolean;
+	public final fun component6 ()Ljava/lang/Boolean;
+	public final fun component7 ()Ljava/lang/String;
+	public final fun component8 ()Z
+	public final fun component9 ()Ljava/lang/String;
+	public final fun copy (Ljava/lang/Boolean;Ljava/lang/Boolean;Ljava/lang/Boolean;Ljava/lang/Boolean;Ljava/lang/Boolean;Ljava/lang/Boolean;Ljava/lang/String;ZLjava/lang/String;ZLjava/lang/Integer;)Lcom/metrolist/innertubex/extraction/ContentHints;
+	public static synthetic fun copy$default (Lcom/metrolist/innertubex/extraction/ContentHints;Ljava/lang/Boolean;Ljava/lang/Boolean;Ljava/lang/Boolean;Ljava/lang/Boolean;Ljava/lang/Boolean;Ljava/lang/Boolean;Ljava/lang/String;ZLjava/lang/String;ZLjava/lang/Integer;ILjava/lang/Object;)Lcom/metrolist/innertubex/extraction/ContentHints;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getEndpointParams ()Ljava/lang/String;
+	public final fun getMaxVideoHeight ()Ljava/lang/Integer;
+	public final fun getPlaybackClientOverrideId ()Ljava/lang/String;
+	public final fun getSabrFirst ()Z
+	public final fun getWantVideo ()Z
+	public fun hashCode ()I
+	public final fun isAgeRestricted ()Ljava/lang/Boolean;
+	public final fun isExplicit ()Ljava/lang/Boolean;
+	public final fun isKidsContent ()Ljava/lang/Boolean;
+	public final fun isLive ()Ljava/lang/Boolean;
+	public final fun isLocal ()Ljava/lang/Boolean;
+	public final fun isUploaded ()Ljava/lang/Boolean;
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class com/metrolist/innertubex/extraction/ExtractedStream {
+	public fun <init> (Ljava/lang/String;Ljava/lang/String;Ljava/util/Map;Ljava/lang/Double;Lkotlin/time/Instant;Ljava/lang/Long;ILjava/lang/String;Ljava/lang/String;Ljava/lang/Integer;Ljava/lang/Integer;Ljava/lang/String;Ljava/lang/String;ZJZLcom/metrolist/innertubex/extraction/PlaybackTrackingData;Lcom/metrolist/innertubex/extraction/StreamDiagnostics;Ljava/lang/String;Ljava/lang/Integer;Ljava/lang/Integer;Ljava/lang/String;Ljava/lang/String;Ljava/lang/Integer;Ljava/lang/Integer;Ljava/lang/Long;Lcom/metrolist/innertubex/sabr/SabrBootstrap;Lcom/metrolist/innertubex/sabr/SabrBootstrap;Ljava/util/List;)V
+	public synthetic fun <init> (Ljava/lang/String;Ljava/lang/String;Ljava/util/Map;Ljava/lang/Double;Lkotlin/time/Instant;Ljava/lang/Long;ILjava/lang/String;Ljava/lang/String;Ljava/lang/Integer;Ljava/lang/Integer;Ljava/lang/String;Ljava/lang/String;ZJZLcom/metrolist/innertubex/extraction/PlaybackTrackingData;Lcom/metrolist/innertubex/extraction/StreamDiagnostics;Ljava/lang/String;Ljava/lang/Integer;Ljava/lang/Integer;Ljava/lang/String;Ljava/lang/String;Ljava/lang/Integer;Ljava/lang/Integer;Ljava/lang/Long;Lcom/metrolist/innertubex/sabr/SabrBootstrap;Lcom/metrolist/innertubex/sabr/SabrBootstrap;Ljava/util/List;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1 ()Ljava/lang/String;
+	public final fun component10 ()Ljava/lang/Integer;
+	public final fun component11 ()Ljava/lang/Integer;
+	public final fun component12 ()Ljava/lang/String;
+	public final fun component13 ()Ljava/lang/String;
+	public final fun component14 ()Z
+	public final fun component15 ()J
+	public final fun component16 ()Z
+	public final fun component17 ()Lcom/metrolist/innertubex/extraction/PlaybackTrackingData;
+	public final fun component18 ()Lcom/metrolist/innertubex/extraction/StreamDiagnostics;
+	public final fun component19 ()Ljava/lang/String;
+	public final fun component2 ()Ljava/lang/String;
+	public final fun component20 ()Ljava/lang/Integer;
+	public final fun component21 ()Ljava/lang/Integer;
+	public final fun component22 ()Ljava/lang/String;
+	public final fun component23 ()Ljava/lang/String;
+	public final fun component24 ()Ljava/lang/Integer;
+	public final fun component25 ()Ljava/lang/Integer;
+	public final fun component26 ()Ljava/lang/Long;
+	public final fun component27 ()Lcom/metrolist/innertubex/sabr/SabrBootstrap;
+	public final fun component28 ()Lcom/metrolist/innertubex/sabr/SabrBootstrap;
+	public final fun component29 ()Ljava/util/List;
+	public final fun component3 ()Ljava/util/Map;
+	public final fun component4 ()Ljava/lang/Double;
+	public final fun component5 ()Lkotlin/time/Instant;
+	public final fun component6 ()Ljava/lang/Long;
+	public final fun component7 ()I
+	public final fun component8 ()Ljava/lang/String;
+	public final fun component9 ()Ljava/lang/String;
+	public final fun copy (Ljava/lang/String;Ljava/lang/String;Ljava/util/Map;Ljava/lang/Double;Lkotlin/time/Instant;Ljava/lang/Long;ILjava/lang/String;Ljava/lang/String;Ljava/lang/Integer;Ljava/lang/Integer;Ljava/lang/String;Ljava/lang/String;ZJZLcom/metrolist/innertubex/extraction/PlaybackTrackingData;Lcom/metrolist/innertubex/extraction/StreamDiagnostics;Ljava/lang/String;Ljava/lang/Integer;Ljava/lang/Integer;Ljava/lang/String;Ljava/lang/String;Ljava/lang/Integer;Ljava/lang/Integer;Ljava/lang/Long;Lcom/metrolist/innertubex/sabr/SabrBootstrap;Lcom/metrolist/innertubex/sabr/SabrBootstrap;Ljava/util/List;)Lcom/metrolist/innertubex/extraction/ExtractedStream;
+	public static synthetic fun copy$default (Lcom/metrolist/innertubex/extraction/ExtractedStream;Ljava/lang/String;Ljava/lang/String;Ljava/util/Map;Ljava/lang/Double;Lkotlin/time/Instant;Ljava/lang/Long;ILjava/lang/String;Ljava/lang/String;Ljava/lang/Integer;Ljava/lang/Integer;Ljava/lang/String;Ljava/lang/String;ZJZLcom/metrolist/innertubex/extraction/PlaybackTrackingData;Lcom/metrolist/innertubex/extraction/StreamDiagnostics;Ljava/lang/String;Ljava/lang/Integer;Ljava/lang/Integer;Ljava/lang/String;Ljava/lang/String;Ljava/lang/Integer;Ljava/lang/Integer;Ljava/lang/Long;Lcom/metrolist/innertubex/sabr/SabrBootstrap;Lcom/metrolist/innertubex/sabr/SabrBootstrap;Ljava/util/List;ILjava/lang/Object;)Lcom/metrolist/innertubex/extraction/ExtractedStream;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getAudioUrl ()Ljava/lang/String;
+	public final fun getAvailableVideoHeights ()Ljava/util/List;
+	public final fun getBitrate ()Ljava/lang/Integer;
+	public final fun getClientName ()Ljava/lang/String;
+	public final fun getCodecs ()Ljava/lang/String;
+	public final fun getContentLengthBytes ()Ljava/lang/Long;
+	public final fun getExpiresAt ()Lkotlin/time/Instant;
+	public final fun getHeaders ()Ljava/util/Map;
+	public final fun getItag ()I
+	public final fun getLoudnessDb ()Ljava/lang/Double;
+	public final fun getMimeType ()Ljava/lang/String;
+	public final fun getPlaybackTracking ()Lcom/metrolist/innertubex/extraction/PlaybackTrackingData;
+	public final fun getProfileId ()Ljava/lang/String;
+	public final fun getRangeChunkSizeBytes ()J
+	public final fun getRequireBoundedRange ()Z
+	public final fun getSabrBootstrap ()Lcom/metrolist/innertubex/sabr/SabrBootstrap;
+	public final fun getSabrVideoBootstrap ()Lcom/metrolist/innertubex/sabr/SabrBootstrap;
+	public final fun getSampleRate ()Ljava/lang/Integer;
+	public final fun getStreamDiagnostics ()Lcom/metrolist/innertubex/extraction/StreamDiagnostics;
+	public final fun getUseRangeChunks ()Z
+	public final fun getVideoBitrate ()Ljava/lang/Integer;
+	public final fun getVideoCodecs ()Ljava/lang/String;
+	public final fun getVideoContentLengthBytes ()Ljava/lang/Long;
+	public final fun getVideoHeight ()Ljava/lang/Integer;
+	public final fun getVideoId ()Ljava/lang/String;
+	public final fun getVideoItag ()Ljava/lang/Integer;
+	public final fun getVideoMimeType ()Ljava/lang/String;
+	public final fun getVideoUrl ()Ljava/lang/String;
+	public final fun getVideoWidth ()Ljava/lang/Integer;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class com/metrolist/innertubex/extraction/ExtractionModelsKt {
+	public static final fun diagnosticSummary (Lcom/metrolist/innertubex/extraction/ContentHints;)Ljava/lang/String;
+}
+
+public final class com/metrolist/innertubex/extraction/FormatSelectorsKt {
+	public static final fun selectBestAudioFormat (Ljava/util/List;Lcom/metrolist/innertubex/extraction/AudioQuality;Z)Lcom/metrolist/innertubex/models/response/PlayerResponse$StreamingData$Format;
+	public static synthetic fun selectBestAudioFormat$default (Ljava/util/List;Lcom/metrolist/innertubex/extraction/AudioQuality;ZILjava/lang/Object;)Lcom/metrolist/innertubex/models/response/PlayerResponse$StreamingData$Format;
+	public static final fun selectBestVideoFormat (Ljava/util/List;ZI)Lcom/metrolist/innertubex/models/response/PlayerResponse$StreamingData$Format;
+	public static synthetic fun selectBestVideoFormat$default (Ljava/util/List;ZIILjava/lang/Object;)Lcom/metrolist/innertubex/models/response/PlayerResponse$StreamingData$Format;
+}
+
+public final class com/metrolist/innertubex/extraction/InnerTubeExtractor : com/metrolist/innertubex/extraction/StreamExtractor {
+	public fun <init> (Lcom/metrolist/innertubex/extraction/YtConfigParser;Lcom/metrolist/innertubex/cipher/YouTubeCipherService;Lcom/metrolist/innertubex/InnerTube;Lcom/metrolist/innertubex/extraction/strategy/ClientFallbackStrategy;Lcom/metrolist/innertubex/extraction/TokenProvider;Lcom/metrolist/innertubex/extraction/strategy/ClientHealthMonitor;Lcom/metrolist/innertubex/InnerTubeLogger;)V
+	public synthetic fun <init> (Lcom/metrolist/innertubex/extraction/YtConfigParser;Lcom/metrolist/innertubex/cipher/YouTubeCipherService;Lcom/metrolist/innertubex/InnerTube;Lcom/metrolist/innertubex/extraction/strategy/ClientFallbackStrategy;Lcom/metrolist/innertubex/extraction/TokenProvider;Lcom/metrolist/innertubex/extraction/strategy/ClientHealthMonitor;Lcom/metrolist/innertubex/InnerTubeLogger;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public fun extract (Ljava/lang/String;Lcom/metrolist/innertubex/extraction/ContentHints;Ljava/util/Set;Lcom/metrolist/innertubex/extraction/AudioQuality;Ljava/lang/String;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public fun prewarm (Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+}
+
+public final class com/metrolist/innertubex/extraction/PlaybackNonceKt {
+	public static final fun appendClientPlaybackNonce (Ljava/lang/String;Ljava/lang/String;)Ljava/lang/String;
+	public static final fun generateClientPlaybackNonce ()Ljava/lang/String;
+	public static final fun replaceClientPlaybackNonce (Ljava/lang/String;Ljava/lang/String;)Ljava/lang/String;
+}
+
+public final class com/metrolist/innertubex/extraction/PlaybackTrackingData {
+	public fun <init> (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/util/List;Ljava/lang/Integer;J)V
+	public final fun component1 ()Ljava/lang/String;
+	public final fun component2 ()Ljava/lang/String;
+	public final fun component3 ()Ljava/lang/String;
+	public final fun component4 ()Ljava/util/List;
+	public final fun component5 ()Ljava/lang/Integer;
+	public final fun component6 ()J
+	public final fun copy (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/util/List;Ljava/lang/Integer;J)Lcom/metrolist/innertubex/extraction/PlaybackTrackingData;
+	public static synthetic fun copy$default (Lcom/metrolist/innertubex/extraction/PlaybackTrackingData;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/util/List;Ljava/lang/Integer;JILjava/lang/Object;)Lcom/metrolist/innertubex/extraction/PlaybackTrackingData;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getClientPlaybackNonce ()Ljava/lang/String;
+	public final fun getDefaultFlushIntervalSeconds ()Ljava/lang/Integer;
+	public final fun getPlaybackUrl ()Ljava/lang/String;
+	public final fun getResolvedAtEpochMs ()J
+	public final fun getScheduledFlushWalltimeSeconds ()Ljava/util/List;
+	public final fun getWatchtimeUrl ()Ljava/lang/String;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class com/metrolist/innertubex/extraction/PlayerConfig {
+	public fun <init> (Ljava/lang/String;Ljava/lang/Integer;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)V
+	public synthetic fun <init> (Ljava/lang/String;Ljava/lang/Integer;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1 ()Ljava/lang/String;
+	public final fun component2 ()Ljava/lang/Integer;
+	public final fun component3 ()Ljava/lang/String;
+	public final fun component4 ()Ljava/lang/String;
+	public final fun component5 ()Ljava/lang/String;
+	public final fun copy (Ljava/lang/String;Ljava/lang/Integer;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)Lcom/metrolist/innertubex/extraction/PlayerConfig;
+	public static synthetic fun copy$default (Lcom/metrolist/innertubex/extraction/PlayerConfig;Ljava/lang/String;Ljava/lang/Integer;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;ILjava/lang/Object;)Lcom/metrolist/innertubex/extraction/PlayerConfig;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getClientVersion ()Ljava/lang/String;
+	public final fun getEncryptedHostFlags ()Ljava/lang/String;
+	public final fun getPlayerUrl ()Ljava/lang/String;
+	public final fun getSignatureTimestamp ()Ljava/lang/Integer;
+	public final fun getVisitorData ()Ljava/lang/String;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class com/metrolist/innertubex/extraction/PoTokenResult {
+	public fun <init> (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)V
+	public final fun component1 ()Ljava/lang/String;
+	public final fun component2 ()Ljava/lang/String;
+	public final fun component3 ()Ljava/lang/String;
+	public final fun copy (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)Lcom/metrolist/innertubex/extraction/PoTokenResult;
+	public static synthetic fun copy$default (Lcom/metrolist/innertubex/extraction/PoTokenResult;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;ILjava/lang/Object;)Lcom/metrolist/innertubex/extraction/PoTokenResult;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getPlayerRequestToken ()Ljava/lang/String;
+	public final fun getStreamingDataToken ()Ljava/lang/String;
+	public final fun getVisitorData ()Ljava/lang/String;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class com/metrolist/innertubex/extraction/StreamAttemptDiagnostic {
+	public fun <init> (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)V
+	public final fun component1 ()Ljava/lang/String;
+	public final fun component2 ()Ljava/lang/String;
+	public final fun component3 ()Ljava/lang/String;
+	public final fun component4 ()Ljava/lang/String;
+	public final fun copy (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)Lcom/metrolist/innertubex/extraction/StreamAttemptDiagnostic;
+	public static synthetic fun copy$default (Lcom/metrolist/innertubex/extraction/StreamAttemptDiagnostic;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;ILjava/lang/Object;)Lcom/metrolist/innertubex/extraction/StreamAttemptDiagnostic;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getClientName ()Ljava/lang/String;
+	public final fun getOutcome ()Ljava/lang/String;
+	public final fun getProfileId ()Ljava/lang/String;
+	public final fun getUserAgent ()Ljava/lang/String;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class com/metrolist/innertubex/extraction/StreamDiagnostics {
+	public fun <init> (Ljava/util/List;Z)V
+	public final fun component1 ()Ljava/util/List;
+	public final fun component2 ()Z
+	public final fun copy (Ljava/util/List;Z)Lcom/metrolist/innertubex/extraction/StreamDiagnostics;
+	public static synthetic fun copy$default (Lcom/metrolist/innertubex/extraction/StreamDiagnostics;Ljava/util/List;ZILjava/lang/Object;)Lcom/metrolist/innertubex/extraction/StreamDiagnostics;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getAttempts ()Ljava/util/List;
+	public final fun getUsedAuthenticatedWatchPage ()Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public abstract interface class com/metrolist/innertubex/extraction/StreamExtractor {
+	public abstract fun extract (Ljava/lang/String;Lcom/metrolist/innertubex/extraction/ContentHints;Ljava/util/Set;Lcom/metrolist/innertubex/extraction/AudioQuality;Ljava/lang/String;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public static synthetic fun extract$default (Lcom/metrolist/innertubex/extraction/StreamExtractor;Ljava/lang/String;Lcom/metrolist/innertubex/extraction/ContentHints;Ljava/util/Set;Lcom/metrolist/innertubex/extraction/AudioQuality;Ljava/lang/String;Lkotlin/coroutines/Continuation;ILjava/lang/Object;)Ljava/lang/Object;
+	public abstract fun prewarm (Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+}
+
+public final class com/metrolist/innertubex/extraction/StreamExtractor$DefaultImpls {
+	public static synthetic fun extract$default (Lcom/metrolist/innertubex/extraction/StreamExtractor;Ljava/lang/String;Lcom/metrolist/innertubex/extraction/ContentHints;Ljava/util/Set;Lcom/metrolist/innertubex/extraction/AudioQuality;Ljava/lang/String;Lkotlin/coroutines/Continuation;ILjava/lang/Object;)Ljava/lang/Object;
+}
+
+public final class com/metrolist/innertubex/extraction/StreamResolveException : java/lang/IllegalStateException {
+	public fun <init> (Lcom/metrolist/innertubex/extraction/StreamResolveException$Reason;Ljava/lang/String;Ljava/lang/Throwable;Lcom/metrolist/innertubex/extraction/StreamDiagnostics;)V
+	public synthetic fun <init> (Lcom/metrolist/innertubex/extraction/StreamResolveException$Reason;Ljava/lang/String;Ljava/lang/Throwable;Lcom/metrolist/innertubex/extraction/StreamDiagnostics;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun getDiagnostics ()Lcom/metrolist/innertubex/extraction/StreamDiagnostics;
+	public final fun getReason ()Lcom/metrolist/innertubex/extraction/StreamResolveException$Reason;
+}
+
+public final class com/metrolist/innertubex/extraction/StreamResolveException$Reason : java/lang/Enum {
+	public static final field AGE_RESTRICTED Lcom/metrolist/innertubex/extraction/StreamResolveException$Reason;
+	public static final field EXPLICIT_UNSUPPORTED Lcom/metrolist/innertubex/extraction/StreamResolveException$Reason;
+	public static final field NETWORK Lcom/metrolist/innertubex/extraction/StreamResolveException$Reason;
+	public static final field NO_MUSIC_VIDEO Lcom/metrolist/innertubex/extraction/StreamResolveException$Reason;
+	public static final field NO_PLAYABLE_STREAM Lcom/metrolist/innertubex/extraction/StreamResolveException$Reason;
+	public static final field UNAVAILABLE Lcom/metrolist/innertubex/extraction/StreamResolveException$Reason;
+	public static final field UNKNOWN Lcom/metrolist/innertubex/extraction/StreamResolveException$Reason;
+	public static fun getEntries ()Lkotlin/enums/EnumEntries;
+	public static fun valueOf (Ljava/lang/String;)Lcom/metrolist/innertubex/extraction/StreamResolveException$Reason;
+	public static fun values ()[Lcom/metrolist/innertubex/extraction/StreamResolveException$Reason;
+}
+
+public abstract interface class com/metrolist/innertubex/extraction/TokenProvider {
+	public fun close (Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public fun getCapabilities ()Lcom/metrolist/innertubex/extraction/TokenProviderCapabilities;
+	public abstract fun getPoToken (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public static synthetic fun getPoToken$default (Lcom/metrolist/innertubex/extraction/TokenProvider;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Lkotlin/coroutines/Continuation;ILjava/lang/Object;)Ljava/lang/Object;
+	public fun invalidateAttestation (Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public fun prewarm (Ljava/lang/String;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public static synthetic fun prewarm$default (Lcom/metrolist/innertubex/extraction/TokenProvider;Ljava/lang/String;Lkotlin/coroutines/Continuation;ILjava/lang/Object;)Ljava/lang/Object;
+}
+
+public final class com/metrolist/innertubex/extraction/TokenProvider$DefaultImpls {
+	public static fun close (Lcom/metrolist/innertubex/extraction/TokenProvider;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public static fun getCapabilities (Lcom/metrolist/innertubex/extraction/TokenProvider;)Lcom/metrolist/innertubex/extraction/TokenProviderCapabilities;
+	public static synthetic fun getPoToken$default (Lcom/metrolist/innertubex/extraction/TokenProvider;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Lkotlin/coroutines/Continuation;ILjava/lang/Object;)Ljava/lang/Object;
+	public static fun invalidateAttestation (Lcom/metrolist/innertubex/extraction/TokenProvider;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public static fun prewarm (Lcom/metrolist/innertubex/extraction/TokenProvider;Ljava/lang/String;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public static synthetic fun prewarm$default (Lcom/metrolist/innertubex/extraction/TokenProvider;Ljava/lang/String;Lkotlin/coroutines/Continuation;ILjava/lang/Object;)Ljava/lang/Object;
+}
+
+public final class com/metrolist/innertubex/extraction/TokenProviderCapabilities {
+	public fun <init> ()V
+	public fun <init> (Ljava/util/Set;Z)V
+	public synthetic fun <init> (Ljava/util/Set;ZILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1 ()Ljava/util/Set;
+	public final fun component2 ()Z
+	public final fun copy (Ljava/util/Set;Z)Lcom/metrolist/innertubex/extraction/TokenProviderCapabilities;
+	public static synthetic fun copy$default (Lcom/metrolist/innertubex/extraction/TokenProviderCapabilities;Ljava/util/Set;ZILjava/lang/Object;)Lcom/metrolist/innertubex/extraction/TokenProviderCapabilities;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getProviders ()Ljava/util/Set;
+	public final fun getUsesWebView ()Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public abstract interface class com/metrolist/innertubex/extraction/YtConfigParser {
+	public abstract fun fetchConfig (Ljava/lang/String;ZLkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public static synthetic fun fetchConfig$default (Lcom/metrolist/innertubex/extraction/YtConfigParser;Ljava/lang/String;ZLkotlin/coroutines/Continuation;ILjava/lang/Object;)Ljava/lang/Object;
+	public fun fetchEmbeddedConfig (Ljava/lang/String;ZLkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public static synthetic fun fetchEmbeddedConfig$default (Lcom/metrolist/innertubex/extraction/YtConfigParser;Ljava/lang/String;ZLkotlin/coroutines/Continuation;ILjava/lang/Object;)Ljava/lang/Object;
+}
+
+public final class com/metrolist/innertubex/extraction/YtConfigParser$DefaultImpls {
+	public static synthetic fun fetchConfig$default (Lcom/metrolist/innertubex/extraction/YtConfigParser;Ljava/lang/String;ZLkotlin/coroutines/Continuation;ILjava/lang/Object;)Ljava/lang/Object;
+	public static fun fetchEmbeddedConfig (Lcom/metrolist/innertubex/extraction/YtConfigParser;Ljava/lang/String;ZLkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public static synthetic fun fetchEmbeddedConfig$default (Lcom/metrolist/innertubex/extraction/YtConfigParser;Ljava/lang/String;ZLkotlin/coroutines/Continuation;ILjava/lang/Object;)Ljava/lang/Object;
+}
+
+public final class com/metrolist/innertubex/extraction/YtConfigParserImpl : com/metrolist/innertubex/extraction/YtConfigParser {
+	public fun <init> (Lio/ktor/client/HttpClient;Lcom/metrolist/innertubex/InnerTube;Lcom/metrolist/innertubex/cipher/RemotePlayerConfigStore;Lcom/metrolist/innertubex/InnerTubeLogger;)V
+	public synthetic fun <init> (Lio/ktor/client/HttpClient;Lcom/metrolist/innertubex/InnerTube;Lcom/metrolist/innertubex/cipher/RemotePlayerConfigStore;Lcom/metrolist/innertubex/InnerTubeLogger;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public fun fetchConfig (Ljava/lang/String;ZLkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public fun fetchEmbeddedConfig (Ljava/lang/String;ZLkotlin/coroutines/Continuation;)Ljava/lang/Object;
+}
+
+public final class com/metrolist/innertubex/extraction/potoken/IntegrityTokenData {
+	public fun <init> (Ljava/lang/String;J)V
+	public final fun getLifetimeSeconds ()J
+	public final fun getTokenJavaScript ()Ljava/lang/String;
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class com/metrolist/innertubex/extraction/potoken/PoTokenException : java/lang/IllegalStateException {
+	public fun <init> (Ljava/lang/String;)V
+}
+
+public final class com/metrolist/innertubex/extraction/potoken/PoTokenJavaScriptKt {
+	public static final fun parseAttestationChallengeData (Ljava/lang/String;Ljava/lang/String;)Ljava/lang/String;
+	public static final fun parseAttestationInterpreterUrl (Ljava/lang/String;)Ljava/lang/String;
+	public static final fun parseIntegrityTokenData (Ljava/lang/String;)Lcom/metrolist/innertubex/extraction/potoken/IntegrityTokenData;
+	public static final fun parseWebPageAttestationContext (Ljava/lang/String;)Lcom/metrolist/innertubex/extraction/potoken/WebPageAttestationContext;
+	public static final fun requireTrustedAttestationInterpreterUrl (Ljava/lang/String;)Ljava/lang/String;
+	public static final fun stringToU8 (Ljava/lang/String;)Ljava/lang/String;
+	public static final fun u8ToBase64 (Ljava/lang/String;)Ljava/lang/String;
+}
+
+public final class com/metrolist/innertubex/extraction/potoken/WebPageAttestationChallengeKt {
+	public static final fun extractWebPageAttestationChallenge (Ljava/lang/String;)Ljava/lang/String;
+	public static final fun extractWebPageAttestationContext (Ljava/lang/String;)Lcom/metrolist/innertubex/extraction/potoken/WebPageAttestationContext;
+}
+
+public final class com/metrolist/innertubex/extraction/potoken/WebPageAttestationContext {
+	public fun <init> (Ljava/lang/String;Ljava/lang/String;)V
+	public final fun getChallenge ()Ljava/lang/String;
+	public final fun getEventId ()Ljava/lang/String;
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class com/metrolist/innertubex/extraction/strategy/AuthenticationPolicy : java/lang/Enum {
+	public static final field OPTIONAL Lcom/metrolist/innertubex/extraction/strategy/AuthenticationPolicy;
+	public static final field REQUIRED Lcom/metrolist/innertubex/extraction/strategy/AuthenticationPolicy;
+	public static final field UNSUPPORTED Lcom/metrolist/innertubex/extraction/strategy/AuthenticationPolicy;
+	public static fun getEntries ()Lkotlin/enums/EnumEntries;
+	public static fun valueOf (Ljava/lang/String;)Lcom/metrolist/innertubex/extraction/strategy/AuthenticationPolicy;
+	public static fun values ()[Lcom/metrolist/innertubex/extraction/strategy/AuthenticationPolicy;
+}
+
+public final class com/metrolist/innertubex/extraction/strategy/CapabilitySupport : java/lang/Enum {
+	public static final field LIMITED Lcom/metrolist/innertubex/extraction/strategy/CapabilitySupport;
+	public static final field SUPPORTED Lcom/metrolist/innertubex/extraction/strategy/CapabilitySupport;
+	public static final field UNKNOWN Lcom/metrolist/innertubex/extraction/strategy/CapabilitySupport;
+	public static final field UNSUPPORTED Lcom/metrolist/innertubex/extraction/strategy/CapabilitySupport;
+	public static fun getEntries ()Lkotlin/enums/EnumEntries;
+	public static fun valueOf (Ljava/lang/String;)Lcom/metrolist/innertubex/extraction/strategy/CapabilitySupport;
+	public static fun values ()[Lcom/metrolist/innertubex/extraction/strategy/CapabilitySupport;
+}
+
+public final class com/metrolist/innertubex/extraction/strategy/ClientContentCapabilities {
+	public fun <init> ()V
+	public fun <init> (Lcom/metrolist/innertubex/extraction/strategy/CapabilitySupport;Lcom/metrolist/innertubex/extraction/strategy/CapabilitySupport;Lcom/metrolist/innertubex/extraction/strategy/CapabilitySupport;Lcom/metrolist/innertubex/extraction/strategy/CapabilitySupport;Lcom/metrolist/innertubex/extraction/strategy/CapabilitySupport;Lcom/metrolist/innertubex/extraction/strategy/CapabilitySupport;)V
+	public synthetic fun <init> (Lcom/metrolist/innertubex/extraction/strategy/CapabilitySupport;Lcom/metrolist/innertubex/extraction/strategy/CapabilitySupport;Lcom/metrolist/innertubex/extraction/strategy/CapabilitySupport;Lcom/metrolist/innertubex/extraction/strategy/CapabilitySupport;Lcom/metrolist/innertubex/extraction/strategy/CapabilitySupport;Lcom/metrolist/innertubex/extraction/strategy/CapabilitySupport;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1 ()Lcom/metrolist/innertubex/extraction/strategy/CapabilitySupport;
+	public final fun component2 ()Lcom/metrolist/innertubex/extraction/strategy/CapabilitySupport;
+	public final fun component3 ()Lcom/metrolist/innertubex/extraction/strategy/CapabilitySupport;
+	public final fun component4 ()Lcom/metrolist/innertubex/extraction/strategy/CapabilitySupport;
+	public final fun component5 ()Lcom/metrolist/innertubex/extraction/strategy/CapabilitySupport;
+	public final fun component6 ()Lcom/metrolist/innertubex/extraction/strategy/CapabilitySupport;
+	public final fun copy (Lcom/metrolist/innertubex/extraction/strategy/CapabilitySupport;Lcom/metrolist/innertubex/extraction/strategy/CapabilitySupport;Lcom/metrolist/innertubex/extraction/strategy/CapabilitySupport;Lcom/metrolist/innertubex/extraction/strategy/CapabilitySupport;Lcom/metrolist/innertubex/extraction/strategy/CapabilitySupport;Lcom/metrolist/innertubex/extraction/strategy/CapabilitySupport;)Lcom/metrolist/innertubex/extraction/strategy/ClientContentCapabilities;
+	public static synthetic fun copy$default (Lcom/metrolist/innertubex/extraction/strategy/ClientContentCapabilities;Lcom/metrolist/innertubex/extraction/strategy/CapabilitySupport;Lcom/metrolist/innertubex/extraction/strategy/CapabilitySupport;Lcom/metrolist/innertubex/extraction/strategy/CapabilitySupport;Lcom/metrolist/innertubex/extraction/strategy/CapabilitySupport;Lcom/metrolist/innertubex/extraction/strategy/CapabilitySupport;Lcom/metrolist/innertubex/extraction/strategy/CapabilitySupport;ILjava/lang/Object;)Lcom/metrolist/innertubex/extraction/strategy/ClientContentCapabilities;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getAgeRestricted ()Lcom/metrolist/innertubex/extraction/strategy/CapabilitySupport;
+	public final fun getExplicit ()Lcom/metrolist/innertubex/extraction/strategy/CapabilitySupport;
+	public final fun getKids ()Lcom/metrolist/innertubex/extraction/strategy/CapabilitySupport;
+	public final fun getLive ()Lcom/metrolist/innertubex/extraction/strategy/CapabilitySupport;
+	public final fun getNormal ()Lcom/metrolist/innertubex/extraction/strategy/CapabilitySupport;
+	public final fun getUploads ()Lcom/metrolist/innertubex/extraction/strategy/CapabilitySupport;
+	public fun hashCode ()I
+	public final fun supportFor (Lcom/metrolist/innertubex/extraction/ContentHints;)Lcom/metrolist/innertubex/extraction/strategy/CapabilitySupport;
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class com/metrolist/innertubex/extraction/strategy/ClientFailureKind : java/lang/Enum {
+	public static final field Companion Lcom/metrolist/innertubex/extraction/strategy/ClientFailureKind$Companion;
+	public static final field MEDIA_FAILURE Lcom/metrolist/innertubex/extraction/strategy/ClientFailureKind;
+	public static final field MEDIA_FORBIDDEN Lcom/metrolist/innertubex/extraction/strategy/ClientFailureKind;
+	public static final field PLAYABILITY Lcom/metrolist/innertubex/extraction/strategy/ClientFailureKind;
+	public static final field PLAYER_REQUEST Lcom/metrolist/innertubex/extraction/strategy/ClientFailureKind;
+	public static final field TOKEN Lcom/metrolist/innertubex/extraction/strategy/ClientFailureKind;
+	public static fun getEntries ()Lkotlin/enums/EnumEntries;
+	public static fun valueOf (Ljava/lang/String;)Lcom/metrolist/innertubex/extraction/strategy/ClientFailureKind;
+	public static fun values ()[Lcom/metrolist/innertubex/extraction/strategy/ClientFailureKind;
+}
+
+public final class com/metrolist/innertubex/extraction/strategy/ClientFailureKind$Companion {
+	public final fun serializer ()Lkotlinx/serialization/KSerializer;
+}
+
+public abstract interface class com/metrolist/innertubex/extraction/strategy/ClientFallbackStrategy {
+	public abstract fun resolveClients (Lcom/metrolist/innertubex/extraction/ContentHints;)Ljava/util/List;
+	public fun selectClients (Lcom/metrolist/innertubex/extraction/strategy/ClientSelectionRequest;)Lcom/metrolist/innertubex/extraction/strategy/ClientSelectionResult;
+}
+
+public final class com/metrolist/innertubex/extraction/strategy/ClientFallbackStrategy$DefaultImpls {
+	public static fun selectClients (Lcom/metrolist/innertubex/extraction/strategy/ClientFallbackStrategy;Lcom/metrolist/innertubex/extraction/strategy/ClientSelectionRequest;)Lcom/metrolist/innertubex/extraction/strategy/ClientSelectionResult;
+}
+
+public final class com/metrolist/innertubex/extraction/strategy/ClientHealthContent : java/lang/Enum {
+	public static final field AGE_RESTRICTED Lcom/metrolist/innertubex/extraction/strategy/ClientHealthContent;
+	public static final field Companion Lcom/metrolist/innertubex/extraction/strategy/ClientHealthContent$Companion;
+	public static final field EXPLICIT Lcom/metrolist/innertubex/extraction/strategy/ClientHealthContent;
+	public static final field KIDS Lcom/metrolist/innertubex/extraction/strategy/ClientHealthContent;
+	public static final field LIVE Lcom/metrolist/innertubex/extraction/strategy/ClientHealthContent;
+	public static final field NORMAL Lcom/metrolist/innertubex/extraction/strategy/ClientHealthContent;
+	public static final field UPLOAD Lcom/metrolist/innertubex/extraction/strategy/ClientHealthContent;
+	public static fun getEntries ()Lkotlin/enums/EnumEntries;
+	public static fun valueOf (Ljava/lang/String;)Lcom/metrolist/innertubex/extraction/strategy/ClientHealthContent;
+	public static fun values ()[Lcom/metrolist/innertubex/extraction/strategy/ClientHealthContent;
+}
+
+public final class com/metrolist/innertubex/extraction/strategy/ClientHealthContent$Companion {
+	public final fun serializer ()Lkotlinx/serialization/KSerializer;
+}
+
+public abstract interface class com/metrolist/innertubex/extraction/strategy/ClientHealthMonitor {
+	public static final field Companion Lcom/metrolist/innertubex/extraction/strategy/ClientHealthMonitor$Companion;
+	public fun recordFailure (Ljava/lang/String;Lcom/metrolist/innertubex/extraction/strategy/ClientFailureKind;Lcom/metrolist/innertubex/extraction/strategy/ClientHealthScope;)V
+	public static synthetic fun recordFailure$default (Lcom/metrolist/innertubex/extraction/strategy/ClientHealthMonitor;Ljava/lang/String;Lcom/metrolist/innertubex/extraction/strategy/ClientFailureKind;Lcom/metrolist/innertubex/extraction/strategy/ClientHealthScope;ILjava/lang/Object;)V
+	public fun recordSuccess (Ljava/lang/String;Lcom/metrolist/innertubex/extraction/strategy/ClientHealthScope;)V
+	public static synthetic fun recordSuccess$default (Lcom/metrolist/innertubex/extraction/strategy/ClientHealthMonitor;Ljava/lang/String;Lcom/metrolist/innertubex/extraction/strategy/ClientHealthScope;ILjava/lang/Object;)V
+	public fun scoreAdjustment (Ljava/lang/String;Lcom/metrolist/innertubex/extraction/strategy/ClientHealthScope;)I
+	public static synthetic fun scoreAdjustment$default (Lcom/metrolist/innertubex/extraction/strategy/ClientHealthMonitor;Ljava/lang/String;Lcom/metrolist/innertubex/extraction/strategy/ClientHealthScope;ILjava/lang/Object;)I
+}
+
+public final class com/metrolist/innertubex/extraction/strategy/ClientHealthMonitor$Companion {
+	public final fun getNONE ()Lcom/metrolist/innertubex/extraction/strategy/ClientHealthMonitor;
+}
+
+public final class com/metrolist/innertubex/extraction/strategy/ClientHealthMonitor$DefaultImpls {
+	public static fun recordFailure (Lcom/metrolist/innertubex/extraction/strategy/ClientHealthMonitor;Ljava/lang/String;Lcom/metrolist/innertubex/extraction/strategy/ClientFailureKind;Lcom/metrolist/innertubex/extraction/strategy/ClientHealthScope;)V
+	public static synthetic fun recordFailure$default (Lcom/metrolist/innertubex/extraction/strategy/ClientHealthMonitor;Ljava/lang/String;Lcom/metrolist/innertubex/extraction/strategy/ClientFailureKind;Lcom/metrolist/innertubex/extraction/strategy/ClientHealthScope;ILjava/lang/Object;)V
+	public static fun recordSuccess (Lcom/metrolist/innertubex/extraction/strategy/ClientHealthMonitor;Ljava/lang/String;Lcom/metrolist/innertubex/extraction/strategy/ClientHealthScope;)V
+	public static synthetic fun recordSuccess$default (Lcom/metrolist/innertubex/extraction/strategy/ClientHealthMonitor;Ljava/lang/String;Lcom/metrolist/innertubex/extraction/strategy/ClientHealthScope;ILjava/lang/Object;)V
+	public static fun scoreAdjustment (Lcom/metrolist/innertubex/extraction/strategy/ClientHealthMonitor;Ljava/lang/String;Lcom/metrolist/innertubex/extraction/strategy/ClientHealthScope;)I
+	public static synthetic fun scoreAdjustment$default (Lcom/metrolist/innertubex/extraction/strategy/ClientHealthMonitor;Ljava/lang/String;Lcom/metrolist/innertubex/extraction/strategy/ClientHealthScope;ILjava/lang/Object;)I
+}
+
+public final class com/metrolist/innertubex/extraction/strategy/ClientHealthScope {
+	public static final field Companion Lcom/metrolist/innertubex/extraction/strategy/ClientHealthScope$Companion;
+	public fun <init> (Lcom/metrolist/innertubex/extraction/strategy/ClientHealthContent;ZZ)V
+	public final fun component1 ()Lcom/metrolist/innertubex/extraction/strategy/ClientHealthContent;
+	public final fun component2 ()Z
+	public final fun component3 ()Z
+	public final fun copy (Lcom/metrolist/innertubex/extraction/strategy/ClientHealthContent;ZZ)Lcom/metrolist/innertubex/extraction/strategy/ClientHealthScope;
+	public static synthetic fun copy$default (Lcom/metrolist/innertubex/extraction/strategy/ClientHealthScope;Lcom/metrolist/innertubex/extraction/strategy/ClientHealthContent;ZZILjava/lang/Object;)Lcom/metrolist/innertubex/extraction/strategy/ClientHealthScope;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getAuthenticated ()Z
+	public final fun getContent ()Lcom/metrolist/innertubex/extraction/strategy/ClientHealthContent;
+	public final fun getWantVideo ()Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final synthetic class com/metrolist/innertubex/extraction/strategy/ClientHealthScope$$serializer : kotlinx/serialization/internal/GeneratedSerializer {
+	public static final field INSTANCE Lcom/metrolist/innertubex/extraction/strategy/ClientHealthScope$$serializer;
+	public final fun childSerializers ()[Lkotlinx/serialization/KSerializer;
+	public final fun deserialize (Lkotlinx/serialization/encoding/Decoder;)Lcom/metrolist/innertubex/extraction/strategy/ClientHealthScope;
+	public synthetic fun deserialize (Lkotlinx/serialization/encoding/Decoder;)Ljava/lang/Object;
+	public final fun getDescriptor ()Lkotlinx/serialization/descriptors/SerialDescriptor;
+	public final fun serialize (Lkotlinx/serialization/encoding/Encoder;Lcom/metrolist/innertubex/extraction/strategy/ClientHealthScope;)V
+	public synthetic fun serialize (Lkotlinx/serialization/encoding/Encoder;Ljava/lang/Object;)V
+	public fun typeParametersSerializers ()[Lkotlinx/serialization/KSerializer;
+}
+
+public final class com/metrolist/innertubex/extraction/strategy/ClientHealthScope$Companion {
+	public final fun from (Lcom/metrolist/innertubex/extraction/ContentHints;Z)Lcom/metrolist/innertubex/extraction/strategy/ClientHealthScope;
+	public final fun serializer ()Lkotlinx/serialization/KSerializer;
+}
+
+public final class com/metrolist/innertubex/extraction/strategy/ClientLifecycle : java/lang/Enum {
+	public static final field BROKEN Lcom/metrolist/innertubex/extraction/strategy/ClientLifecycle;
+	public static final field CANARY Lcom/metrolist/innertubex/extraction/strategy/ClientLifecycle;
+	public static final field DEPRECATED Lcom/metrolist/innertubex/extraction/strategy/ClientLifecycle;
+	public static final field EXPERIMENTAL Lcom/metrolist/innertubex/extraction/strategy/ClientLifecycle;
+	public static final field STABLE Lcom/metrolist/innertubex/extraction/strategy/ClientLifecycle;
+	public static final field UNRELEASED Lcom/metrolist/innertubex/extraction/strategy/ClientLifecycle;
+	public static fun getEntries ()Lkotlin/enums/EnumEntries;
+	public static fun valueOf (Ljava/lang/String;)Lcom/metrolist/innertubex/extraction/strategy/ClientLifecycle;
+	public static fun values ()[Lcom/metrolist/innertubex/extraction/strategy/ClientLifecycle;
+}
+
+public final class com/metrolist/innertubex/extraction/strategy/ClientPoTokenCapabilities {
+	public fun <init> ()V
+	public fun <init> (Lcom/metrolist/innertubex/extraction/strategy/PoTokenRule;Lcom/metrolist/innertubex/extraction/strategy/PoTokenRule;Lcom/metrolist/innertubex/extraction/strategy/PoTokenRule;)V
+	public synthetic fun <init> (Lcom/metrolist/innertubex/extraction/strategy/PoTokenRule;Lcom/metrolist/innertubex/extraction/strategy/PoTokenRule;Lcom/metrolist/innertubex/extraction/strategy/PoTokenRule;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1 ()Lcom/metrolist/innertubex/extraction/strategy/PoTokenRule;
+	public final fun component2 ()Lcom/metrolist/innertubex/extraction/strategy/PoTokenRule;
+	public final fun component3 ()Lcom/metrolist/innertubex/extraction/strategy/PoTokenRule;
+	public final fun copy (Lcom/metrolist/innertubex/extraction/strategy/PoTokenRule;Lcom/metrolist/innertubex/extraction/strategy/PoTokenRule;Lcom/metrolist/innertubex/extraction/strategy/PoTokenRule;)Lcom/metrolist/innertubex/extraction/strategy/ClientPoTokenCapabilities;
+	public static synthetic fun copy$default (Lcom/metrolist/innertubex/extraction/strategy/ClientPoTokenCapabilities;Lcom/metrolist/innertubex/extraction/strategy/PoTokenRule;Lcom/metrolist/innertubex/extraction/strategy/PoTokenRule;Lcom/metrolist/innertubex/extraction/strategy/PoTokenRule;ILjava/lang/Object;)Lcom/metrolist/innertubex/extraction/strategy/ClientPoTokenCapabilities;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getGvs ()Lcom/metrolist/innertubex/extraction/strategy/PoTokenRule;
+	public final fun getPlayer ()Lcom/metrolist/innertubex/extraction/strategy/PoTokenRule;
+	public final fun getSubtitles ()Lcom/metrolist/innertubex/extraction/strategy/PoTokenRule;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class com/metrolist/innertubex/extraction/strategy/ClientRequestCapabilities {
+	public fun <init> ()V
+	public fun <init> (ZLcom/metrolist/innertubex/extraction/strategy/JavaScriptRequirement;Lcom/metrolist/innertubex/extraction/strategy/JavaScriptRequirement;Lcom/metrolist/innertubex/extraction/strategy/WebViewRequirement;ZZZ)V
+	public synthetic fun <init> (ZLcom/metrolist/innertubex/extraction/strategy/JavaScriptRequirement;Lcom/metrolist/innertubex/extraction/strategy/JavaScriptRequirement;Lcom/metrolist/innertubex/extraction/strategy/WebViewRequirement;ZZZILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1 ()Z
+	public final fun component2 ()Lcom/metrolist/innertubex/extraction/strategy/JavaScriptRequirement;
+	public final fun component3 ()Lcom/metrolist/innertubex/extraction/strategy/JavaScriptRequirement;
+	public final fun component4 ()Lcom/metrolist/innertubex/extraction/strategy/WebViewRequirement;
+	public final fun component5 ()Z
+	public final fun component6 ()Z
+	public final fun component7 ()Z
+	public final fun copy (ZLcom/metrolist/innertubex/extraction/strategy/JavaScriptRequirement;Lcom/metrolist/innertubex/extraction/strategy/JavaScriptRequirement;Lcom/metrolist/innertubex/extraction/strategy/WebViewRequirement;ZZZ)Lcom/metrolist/innertubex/extraction/strategy/ClientRequestCapabilities;
+	public static synthetic fun copy$default (Lcom/metrolist/innertubex/extraction/strategy/ClientRequestCapabilities;ZLcom/metrolist/innertubex/extraction/strategy/JavaScriptRequirement;Lcom/metrolist/innertubex/extraction/strategy/JavaScriptRequirement;Lcom/metrolist/innertubex/extraction/strategy/WebViewRequirement;ZZZILjava/lang/Object;)Lcom/metrolist/innertubex/extraction/strategy/ClientRequestCapabilities;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getCookies ()Z
+	public final fun getEmbedded ()Z
+	public final fun getEncryptedHostFlags ()Z
+	public final fun getNTransform ()Lcom/metrolist/innertubex/extraction/strategy/JavaScriptRequirement;
+	public final fun getSignatureCipher ()Lcom/metrolist/innertubex/extraction/strategy/JavaScriptRequirement;
+	public final fun getSignatureTimestamp ()Z
+	public final fun getWebView ()Lcom/metrolist/innertubex/extraction/strategy/WebViewRequirement;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class com/metrolist/innertubex/extraction/strategy/ClientSelectionMode : java/lang/Enum {
+	public static final field API_ONLY Lcom/metrolist/innertubex/extraction/strategy/ClientSelectionMode;
+	public static final field AUTOMATIC Lcom/metrolist/innertubex/extraction/strategy/ClientSelectionMode;
+	public static final field DISABLED Lcom/metrolist/innertubex/extraction/strategy/ClientSelectionMode;
+	public static final field MANUAL_ONLY Lcom/metrolist/innertubex/extraction/strategy/ClientSelectionMode;
+	public static final field PROBE_ONLY Lcom/metrolist/innertubex/extraction/strategy/ClientSelectionMode;
+	public static fun getEntries ()Lkotlin/enums/EnumEntries;
+	public static fun valueOf (Ljava/lang/String;)Lcom/metrolist/innertubex/extraction/strategy/ClientSelectionMode;
+	public static fun values ()[Lcom/metrolist/innertubex/extraction/strategy/ClientSelectionMode;
+}
+
+public final class com/metrolist/innertubex/extraction/strategy/ClientSelectionRequest {
+	public fun <init> (Lcom/metrolist/innertubex/extraction/ContentHints;ZZLjava/util/Set;ZZZLcom/metrolist/innertubex/extraction/strategy/PlaybackTransportPreference;Ljava/util/Set;)V
+	public synthetic fun <init> (Lcom/metrolist/innertubex/extraction/ContentHints;ZZLjava/util/Set;ZZZLcom/metrolist/innertubex/extraction/strategy/PlaybackTransportPreference;Ljava/util/Set;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1 ()Lcom/metrolist/innertubex/extraction/ContentHints;
+	public final fun component2 ()Z
+	public final fun component3 ()Z
+	public final fun component4 ()Ljava/util/Set;
+	public final fun component5 ()Z
+	public final fun component6 ()Z
+	public final fun component7 ()Z
+	public final fun component8 ()Lcom/metrolist/innertubex/extraction/strategy/PlaybackTransportPreference;
+	public final fun component9 ()Ljava/util/Set;
+	public final fun copy (Lcom/metrolist/innertubex/extraction/ContentHints;ZZLjava/util/Set;ZZZLcom/metrolist/innertubex/extraction/strategy/PlaybackTransportPreference;Ljava/util/Set;)Lcom/metrolist/innertubex/extraction/strategy/ClientSelectionRequest;
+	public static synthetic fun copy$default (Lcom/metrolist/innertubex/extraction/strategy/ClientSelectionRequest;Lcom/metrolist/innertubex/extraction/ContentHints;ZZLjava/util/Set;ZZZLcom/metrolist/innertubex/extraction/strategy/PlaybackTransportPreference;Ljava/util/Set;ILjava/lang/Object;)Lcom/metrolist/innertubex/extraction/strategy/ClientSelectionRequest;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getAuthenticated ()Z
+	public final fun getAvailablePoTokenProviders ()Ljava/util/Set;
+	public final fun getExcludedClients ()Ljava/util/Set;
+	public final fun getFastPathOnly ()Z
+	public final fun getHints ()Lcom/metrolist/innertubex/extraction/ContentHints;
+	public final fun getJavaScriptRuntimeAvailable ()Z
+	public final fun getPremium ()Z
+	public final fun getTransportPreference ()Lcom/metrolist/innertubex/extraction/strategy/PlaybackTransportPreference;
+	public final fun getWebViewAvailable ()Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class com/metrolist/innertubex/extraction/strategy/ClientSelectionResult {
+	public fun <init> (Ljava/util/List;Ljava/util/List;)V
+	public synthetic fun <init> (Ljava/util/List;Ljava/util/List;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1 ()Ljava/util/List;
+	public final fun component2 ()Ljava/util/List;
+	public final fun copy (Ljava/util/List;Ljava/util/List;)Lcom/metrolist/innertubex/extraction/strategy/ClientSelectionResult;
+	public static synthetic fun copy$default (Lcom/metrolist/innertubex/extraction/strategy/ClientSelectionResult;Ljava/util/List;Ljava/util/List;ILjava/lang/Object;)Lcom/metrolist/innertubex/extraction/strategy/ClientSelectionResult;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getCandidates ()Ljava/util/List;
+	public final fun getRejected ()Ljava/util/List;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class com/metrolist/innertubex/extraction/strategy/ContentAwareFallbackStrategy : com/metrolist/innertubex/extraction/strategy/ClientFallbackStrategy {
+	public fun <init> ()V
+	public fun <init> (Lcom/metrolist/innertubex/extraction/strategy/ClientHealthMonitor;Lcom/metrolist/innertubex/extraction/strategy/PlaybackClientCatalogView;)V
+	public synthetic fun <init> (Lcom/metrolist/innertubex/extraction/strategy/ClientHealthMonitor;Lcom/metrolist/innertubex/extraction/strategy/PlaybackClientCatalogView;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public fun resolveClients (Lcom/metrolist/innertubex/extraction/ContentHints;)Ljava/util/List;
+	public fun selectClients (Lcom/metrolist/innertubex/extraction/strategy/ClientSelectionRequest;)Lcom/metrolist/innertubex/extraction/strategy/ClientSelectionResult;
+}
+
+public final class com/metrolist/innertubex/extraction/strategy/JavaScriptRequirement : java/lang/Enum {
+	public static final field NEVER Lcom/metrolist/innertubex/extraction/strategy/JavaScriptRequirement;
+	public static final field REQUIRED Lcom/metrolist/innertubex/extraction/strategy/JavaScriptRequirement;
+	public static final field RESPONSE_DEPENDENT Lcom/metrolist/innertubex/extraction/strategy/JavaScriptRequirement;
+	public static fun getEntries ()Lkotlin/enums/EnumEntries;
+	public static fun valueOf (Ljava/lang/String;)Lcom/metrolist/innertubex/extraction/strategy/JavaScriptRequirement;
+	public static fun values ()[Lcom/metrolist/innertubex/extraction/strategy/JavaScriptRequirement;
+}
+
+public final class com/metrolist/innertubex/extraction/strategy/PlaybackClientCatalog : com/metrolist/innertubex/extraction/strategy/PlaybackClientCatalogView {
+	public static final field AUTOMATIC_ID Ljava/lang/String;
+	public static final field INSTANCE Lcom/metrolist/innertubex/extraction/strategy/PlaybackClientCatalog;
+	public static final field SABR_FIRST_ID Ljava/lang/String;
+	public fun find (Ljava/lang/String;)Lcom/metrolist/innertubex/extraction/strategy/PlaybackClientOption;
+	public final fun findBenchmark (Ljava/lang/String;)Lcom/metrolist/innertubex/extraction/strategy/PlaybackClientOption;
+	public final fun findDevtoolsOverride (Ljava/lang/String;)Lcom/metrolist/innertubex/extraction/strategy/PlaybackClientOption;
+	public final fun findManifest (Lcom/metrolist/innertubex/models/YouTubeClient;)Lcom/metrolist/innertubex/extraction/strategy/PlaybackClientManifest;
+	public final fun findManifest (Ljava/lang/String;)Lcom/metrolist/innertubex/extraction/strategy/PlaybackClientManifest;
+	public fun getAutomaticManifests ()Ljava/util/List;
+	public final fun getBenchmarkOptions ()Ljava/util/List;
+	public final fun getDevtoolsOverrideOptions ()Ljava/util/List;
+	public final fun getManifests ()Ljava/util/List;
+	public final fun getOptions ()Ljava/util/List;
+	public final fun isDevtoolsOverrideAllowed (Ljava/lang/String;)Z
+	public final fun isDevtoolsSelectionAllowed (Ljava/lang/String;)Z
+	public final fun manifestIdFromProfileId (Ljava/lang/String;)Ljava/lang/String;
+	public fun profileIds (Lcom/metrolist/innertubex/extraction/strategy/PlaybackClientManifest;Z)Ljava/util/Set;
+}
+
+public abstract interface class com/metrolist/innertubex/extraction/strategy/PlaybackClientCatalogView {
+	public abstract fun find (Ljava/lang/String;)Lcom/metrolist/innertubex/extraction/strategy/PlaybackClientOption;
+	public abstract fun getAutomaticManifests ()Ljava/util/List;
+	public abstract fun profileIds (Lcom/metrolist/innertubex/extraction/strategy/PlaybackClientManifest;Z)Ljava/util/Set;
+}
+
+public final class com/metrolist/innertubex/extraction/strategy/PlaybackClientManifest {
+	public fun <init> (Ljava/lang/String;Ljava/lang/String;Lcom/metrolist/innertubex/models/YouTubeClient;Lcom/metrolist/innertubex/extraction/strategy/ClientLifecycle;Lcom/metrolist/innertubex/extraction/strategy/ClientSelectionMode;Lcom/metrolist/innertubex/extraction/strategy/AuthenticationPolicy;Ljava/util/Set;Lcom/metrolist/innertubex/extraction/strategy/ClientPoTokenCapabilities;Lcom/metrolist/innertubex/extraction/strategy/ClientRequestCapabilities;Lcom/metrolist/innertubex/extraction/strategy/ClientContentCapabilities;Lcom/metrolist/innertubex/extraction/strategy/ClientContentCapabilities;ILjava/util/Set;Ljava/lang/String;)V
+	public synthetic fun <init> (Ljava/lang/String;Ljava/lang/String;Lcom/metrolist/innertubex/models/YouTubeClient;Lcom/metrolist/innertubex/extraction/strategy/ClientLifecycle;Lcom/metrolist/innertubex/extraction/strategy/ClientSelectionMode;Lcom/metrolist/innertubex/extraction/strategy/AuthenticationPolicy;Ljava/util/Set;Lcom/metrolist/innertubex/extraction/strategy/ClientPoTokenCapabilities;Lcom/metrolist/innertubex/extraction/strategy/ClientRequestCapabilities;Lcom/metrolist/innertubex/extraction/strategy/ClientContentCapabilities;Lcom/metrolist/innertubex/extraction/strategy/ClientContentCapabilities;ILjava/util/Set;Ljava/lang/String;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1 ()Ljava/lang/String;
+	public final fun component10 ()Lcom/metrolist/innertubex/extraction/strategy/ClientContentCapabilities;
+	public final fun component11 ()Lcom/metrolist/innertubex/extraction/strategy/ClientContentCapabilities;
+	public final fun component12 ()I
+	public final fun component13 ()Ljava/util/Set;
+	public final fun component14 ()Ljava/lang/String;
+	public final fun component2 ()Ljava/lang/String;
+	public final fun component3 ()Lcom/metrolist/innertubex/models/YouTubeClient;
+	public final fun component4 ()Lcom/metrolist/innertubex/extraction/strategy/ClientLifecycle;
+	public final fun component5 ()Lcom/metrolist/innertubex/extraction/strategy/ClientSelectionMode;
+	public final fun component6 ()Lcom/metrolist/innertubex/extraction/strategy/AuthenticationPolicy;
+	public final fun component7 ()Ljava/util/Set;
+	public final fun component8 ()Lcom/metrolist/innertubex/extraction/strategy/ClientPoTokenCapabilities;
+	public final fun component9 ()Lcom/metrolist/innertubex/extraction/strategy/ClientRequestCapabilities;
+	public final fun copy (Ljava/lang/String;Ljava/lang/String;Lcom/metrolist/innertubex/models/YouTubeClient;Lcom/metrolist/innertubex/extraction/strategy/ClientLifecycle;Lcom/metrolist/innertubex/extraction/strategy/ClientSelectionMode;Lcom/metrolist/innertubex/extraction/strategy/AuthenticationPolicy;Ljava/util/Set;Lcom/metrolist/innertubex/extraction/strategy/ClientPoTokenCapabilities;Lcom/metrolist/innertubex/extraction/strategy/ClientRequestCapabilities;Lcom/metrolist/innertubex/extraction/strategy/ClientContentCapabilities;Lcom/metrolist/innertubex/extraction/strategy/ClientContentCapabilities;ILjava/util/Set;Ljava/lang/String;)Lcom/metrolist/innertubex/extraction/strategy/PlaybackClientManifest;
+	public static synthetic fun copy$default (Lcom/metrolist/innertubex/extraction/strategy/PlaybackClientManifest;Ljava/lang/String;Ljava/lang/String;Lcom/metrolist/innertubex/models/YouTubeClient;Lcom/metrolist/innertubex/extraction/strategy/ClientLifecycle;Lcom/metrolist/innertubex/extraction/strategy/ClientSelectionMode;Lcom/metrolist/innertubex/extraction/strategy/AuthenticationPolicy;Ljava/util/Set;Lcom/metrolist/innertubex/extraction/strategy/ClientPoTokenCapabilities;Lcom/metrolist/innertubex/extraction/strategy/ClientRequestCapabilities;Lcom/metrolist/innertubex/extraction/strategy/ClientContentCapabilities;Lcom/metrolist/innertubex/extraction/strategy/ClientContentCapabilities;ILjava/util/Set;Ljava/lang/String;ILjava/lang/Object;)Lcom/metrolist/innertubex/extraction/strategy/PlaybackClientManifest;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getAuthentication ()Lcom/metrolist/innertubex/extraction/strategy/AuthenticationPolicy;
+	public final fun getBenchmarkContent ()Lcom/metrolist/innertubex/extraction/strategy/ClientContentCapabilities;
+	public final fun getClient ()Lcom/metrolist/innertubex/models/YouTubeClient;
+	public final fun getContent ()Lcom/metrolist/innertubex/extraction/strategy/ClientContentCapabilities;
+	public final fun getDisplayName ()Ljava/lang/String;
+	public final fun getEvidence ()Ljava/util/Set;
+	public final fun getId ()Ljava/lang/String;
+	public final fun getLifecycle ()Lcom/metrolist/innertubex/extraction/strategy/ClientLifecycle;
+	public final fun getNotes ()Ljava/lang/String;
+	public final fun getPoTokens ()Lcom/metrolist/innertubex/extraction/strategy/ClientPoTokenCapabilities;
+	public final fun getPriority ()I
+	public final fun getRequest ()Lcom/metrolist/innertubex/extraction/strategy/ClientRequestCapabilities;
+	public final fun getSelectionMode ()Lcom/metrolist/innertubex/extraction/strategy/ClientSelectionMode;
+	public final fun getTransports ()Ljava/util/Set;
+	public fun hashCode ()I
+	public final fun isAutomatic ()Z
+	public final fun isPlaybackClient ()Z
+	public final fun supportsProvider (Ljava/util/Set;)Z
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class com/metrolist/innertubex/extraction/strategy/PlaybackClientOption {
+	public fun <init> (Ljava/lang/String;Ljava/lang/String;Lcom/metrolist/innertubex/models/YouTubeClient;Lcom/metrolist/innertubex/extraction/strategy/PlaybackClientManifest;)V
+	public final fun component1 ()Ljava/lang/String;
+	public final fun component2 ()Ljava/lang/String;
+	public final fun component3 ()Lcom/metrolist/innertubex/models/YouTubeClient;
+	public final fun component4 ()Lcom/metrolist/innertubex/extraction/strategy/PlaybackClientManifest;
+	public final fun copy (Ljava/lang/String;Ljava/lang/String;Lcom/metrolist/innertubex/models/YouTubeClient;Lcom/metrolist/innertubex/extraction/strategy/PlaybackClientManifest;)Lcom/metrolist/innertubex/extraction/strategy/PlaybackClientOption;
+	public static synthetic fun copy$default (Lcom/metrolist/innertubex/extraction/strategy/PlaybackClientOption;Ljava/lang/String;Ljava/lang/String;Lcom/metrolist/innertubex/models/YouTubeClient;Lcom/metrolist/innertubex/extraction/strategy/PlaybackClientManifest;ILjava/lang/Object;)Lcom/metrolist/innertubex/extraction/strategy/PlaybackClientOption;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getClient ()Lcom/metrolist/innertubex/models/YouTubeClient;
+	public final fun getDisplayName ()Ljava/lang/String;
+	public final fun getId ()Ljava/lang/String;
+	public final fun getManifest ()Lcom/metrolist/innertubex/extraction/strategy/PlaybackClientManifest;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class com/metrolist/innertubex/extraction/strategy/PlaybackTransport : java/lang/Enum {
+	public static final field DASH Lcom/metrolist/innertubex/extraction/strategy/PlaybackTransport;
+	public static final field DIRECT Lcom/metrolist/innertubex/extraction/strategy/PlaybackTransport;
+	public static final field HLS Lcom/metrolist/innertubex/extraction/strategy/PlaybackTransport;
+	public static final field SABR Lcom/metrolist/innertubex/extraction/strategy/PlaybackTransport;
+	public static fun getEntries ()Lkotlin/enums/EnumEntries;
+	public static fun valueOf (Ljava/lang/String;)Lcom/metrolist/innertubex/extraction/strategy/PlaybackTransport;
+	public static fun values ()[Lcom/metrolist/innertubex/extraction/strategy/PlaybackTransport;
+}
+
+public final class com/metrolist/innertubex/extraction/strategy/PlaybackTransportPreference : java/lang/Enum {
+	public static final field AUTO Lcom/metrolist/innertubex/extraction/strategy/PlaybackTransportPreference;
+	public static final field DIRECT Lcom/metrolist/innertubex/extraction/strategy/PlaybackTransportPreference;
+	public static final field HLS Lcom/metrolist/innertubex/extraction/strategy/PlaybackTransportPreference;
+	public static final field SABR Lcom/metrolist/innertubex/extraction/strategy/PlaybackTransportPreference;
+	public static fun getEntries ()Lkotlin/enums/EnumEntries;
+	public static fun valueOf (Ljava/lang/String;)Lcom/metrolist/innertubex/extraction/strategy/PlaybackTransportPreference;
+	public static fun values ()[Lcom/metrolist/innertubex/extraction/strategy/PlaybackTransportPreference;
+}
+
+public final class com/metrolist/innertubex/extraction/strategy/PoTokenProviderKind : java/lang/Enum {
+	public static final field ANDROID_DROIDGUARD Lcom/metrolist/innertubex/extraction/strategy/PoTokenProviderKind;
+	public static final field EXTERNAL Lcom/metrolist/innertubex/extraction/strategy/PoTokenProviderKind;
+	public static final field IOS_ATTESTATION Lcom/metrolist/innertubex/extraction/strategy/PoTokenProviderKind;
+	public static final field WEBPAGE_ATTESTATION Lcom/metrolist/innertubex/extraction/strategy/PoTokenProviderKind;
+	public static final field WEB_BOTGUARD Lcom/metrolist/innertubex/extraction/strategy/PoTokenProviderKind;
+	public static fun getEntries ()Lkotlin/enums/EnumEntries;
+	public static fun valueOf (Ljava/lang/String;)Lcom/metrolist/innertubex/extraction/strategy/PoTokenProviderKind;
+	public static fun values ()[Lcom/metrolist/innertubex/extraction/strategy/PoTokenProviderKind;
+}
+
+public final class com/metrolist/innertubex/extraction/strategy/PoTokenRequirement : java/lang/Enum {
+	public static final field NONE Lcom/metrolist/innertubex/extraction/strategy/PoTokenRequirement;
+	public static final field OPTIONAL Lcom/metrolist/innertubex/extraction/strategy/PoTokenRequirement;
+	public static final field REQUIRED Lcom/metrolist/innertubex/extraction/strategy/PoTokenRequirement;
+	public static fun getEntries ()Lkotlin/enums/EnumEntries;
+	public static fun valueOf (Ljava/lang/String;)Lcom/metrolist/innertubex/extraction/strategy/PoTokenRequirement;
+	public static fun values ()[Lcom/metrolist/innertubex/extraction/strategy/PoTokenRequirement;
+}
+
+public final class com/metrolist/innertubex/extraction/strategy/PoTokenRule {
+	public fun <init> ()V
+	public fun <init> (Lcom/metrolist/innertubex/extraction/strategy/PoTokenRequirement;Lcom/metrolist/innertubex/models/PoTokenBinding;Ljava/util/Set;Z)V
+	public synthetic fun <init> (Lcom/metrolist/innertubex/extraction/strategy/PoTokenRequirement;Lcom/metrolist/innertubex/models/PoTokenBinding;Ljava/util/Set;ZILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1 ()Lcom/metrolist/innertubex/extraction/strategy/PoTokenRequirement;
+	public final fun component2 ()Lcom/metrolist/innertubex/models/PoTokenBinding;
+	public final fun component3 ()Ljava/util/Set;
+	public final fun component4 ()Z
+	public final fun copy (Lcom/metrolist/innertubex/extraction/strategy/PoTokenRequirement;Lcom/metrolist/innertubex/models/PoTokenBinding;Ljava/util/Set;Z)Lcom/metrolist/innertubex/extraction/strategy/PoTokenRule;
+	public static synthetic fun copy$default (Lcom/metrolist/innertubex/extraction/strategy/PoTokenRule;Lcom/metrolist/innertubex/extraction/strategy/PoTokenRequirement;Lcom/metrolist/innertubex/models/PoTokenBinding;Ljava/util/Set;ZILjava/lang/Object;)Lcom/metrolist/innertubex/extraction/strategy/PoTokenRule;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getBinding ()Lcom/metrolist/innertubex/models/PoTokenBinding;
+	public final fun getPremiumMayBypass ()Z
+	public final fun getProviders ()Ljava/util/Set;
+	public final fun getRequirement ()Lcom/metrolist/innertubex/extraction/strategy/PoTokenRequirement;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class com/metrolist/innertubex/extraction/strategy/RejectedClient {
+	public fun <init> (Lcom/metrolist/innertubex/extraction/strategy/PlaybackClientManifest;Ljava/util/List;)V
+	public final fun component1 ()Lcom/metrolist/innertubex/extraction/strategy/PlaybackClientManifest;
+	public final fun component2 ()Ljava/util/List;
+	public final fun copy (Lcom/metrolist/innertubex/extraction/strategy/PlaybackClientManifest;Ljava/util/List;)Lcom/metrolist/innertubex/extraction/strategy/RejectedClient;
+	public static synthetic fun copy$default (Lcom/metrolist/innertubex/extraction/strategy/RejectedClient;Lcom/metrolist/innertubex/extraction/strategy/PlaybackClientManifest;Ljava/util/List;ILjava/lang/Object;)Lcom/metrolist/innertubex/extraction/strategy/RejectedClient;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getManifest ()Lcom/metrolist/innertubex/extraction/strategy/PlaybackClientManifest;
+	public final fun getReasons ()Ljava/util/List;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class com/metrolist/innertubex/extraction/strategy/SelectedClient {
+	public fun <init> (Lcom/metrolist/innertubex/models/YouTubeClient;Lcom/metrolist/innertubex/extraction/strategy/PlaybackClientManifest;ILjava/util/List;)V
+	public synthetic fun <init> (Lcom/metrolist/innertubex/models/YouTubeClient;Lcom/metrolist/innertubex/extraction/strategy/PlaybackClientManifest;ILjava/util/List;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1 ()Lcom/metrolist/innertubex/models/YouTubeClient;
+	public final fun component2 ()Lcom/metrolist/innertubex/extraction/strategy/PlaybackClientManifest;
+	public final fun component3 ()I
+	public final fun component4 ()Ljava/util/List;
+	public final fun copy (Lcom/metrolist/innertubex/models/YouTubeClient;Lcom/metrolist/innertubex/extraction/strategy/PlaybackClientManifest;ILjava/util/List;)Lcom/metrolist/innertubex/extraction/strategy/SelectedClient;
+	public static synthetic fun copy$default (Lcom/metrolist/innertubex/extraction/strategy/SelectedClient;Lcom/metrolist/innertubex/models/YouTubeClient;Lcom/metrolist/innertubex/extraction/strategy/PlaybackClientManifest;ILjava/util/List;ILjava/lang/Object;)Lcom/metrolist/innertubex/extraction/strategy/SelectedClient;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getClient ()Lcom/metrolist/innertubex/models/YouTubeClient;
+	public final fun getManifest ()Lcom/metrolist/innertubex/extraction/strategy/PlaybackClientManifest;
+	public final fun getReasons ()Ljava/util/List;
+	public final fun getScore ()I
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class com/metrolist/innertubex/extraction/strategy/WebViewRequirement : java/lang/Enum {
+	public static final field FULL_PLAYER Lcom/metrolist/innertubex/extraction/strategy/WebViewRequirement;
+	public static final field NONE Lcom/metrolist/innertubex/extraction/strategy/WebViewRequirement;
+	public static final field OPTIONAL_TOKEN_MINTING Lcom/metrolist/innertubex/extraction/strategy/WebViewRequirement;
+	public static final field REQUIRED_TOKEN_MINTING Lcom/metrolist/innertubex/extraction/strategy/WebViewRequirement;
+	public static fun getEntries ()Lkotlin/enums/EnumEntries;
+	public static fun valueOf (Ljava/lang/String;)Lcom/metrolist/innertubex/extraction/strategy/WebViewRequirement;
+	public static fun values ()[Lcom/metrolist/innertubex/extraction/strategy/WebViewRequirement;
 }
 
 public final class com/metrolist/innertubex/models/AccountInfo {
@@ -3698,6 +4513,15 @@ public final class com/metrolist/innertubex/sabr/SabrVideoStream {
 	public synthetic fun <init> (Lio/ktor/client/HttpClient;Lcom/metrolist/innertubex/sabr/SabrBootstrap;ILkotlin/jvm/functions/Function0;Lkotlin/jvm/functions/Function1;Lkotlin/jvm/functions/Function2;JLcom/metrolist/innertubex/InnerTubeLogger;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
 	public final fun bytes ()Lkotlinx/coroutines/flow/Flow;
 	public final fun chunks ()Lkotlinx/coroutines/flow/Flow;
+}
+
+public final class com/metrolist/innertubex/utils/Sha1Kt {
+	public static final fun sha1 (Ljava/lang/String;)Ljava/lang/String;
+}
+
+public final class com/metrolist/innertubex/utils/UtilsKt {
+	public static final fun parseCookieString (Ljava/lang/String;)Ljava/util/Map;
+	public static final fun sanitizeCookieString (Ljava/lang/String;)Ljava/lang/String;
 }
 
 public final class com/metrolist/innertubex/utils/YouTubeUrlParser {

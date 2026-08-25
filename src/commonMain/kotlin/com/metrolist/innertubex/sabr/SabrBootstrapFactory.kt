@@ -123,6 +123,7 @@ fun requireAllowedSabrUrl(value: String): String {
     val host = url.host.lowercase()
     if (
         url.protocol != URLProtocol.HTTPS ||
+        url.port != 443 ||
         (host != "googlevideo.com" && !host.endsWith(".googlevideo.com")) ||
         url.encodedPath != "/videoplayback" ||
         url.user != null ||
