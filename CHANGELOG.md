@@ -6,6 +6,12 @@ that `0.x` releases may contain breaking API changes.
 
 ## [Unreleased]
 
+## [0.2.3] - 2026-08-27
+
+### Fixed
+
+- Allow EJS to process current large player scripts without exhausting its bounded QuickJS memory budget.
+
 ## [0.2.2] - 2026-08-26
 
 ### Fixed

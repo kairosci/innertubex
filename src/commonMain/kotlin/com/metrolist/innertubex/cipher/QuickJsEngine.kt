@@ -15,7 +15,9 @@ import kotlinx.coroutines.withContext
 internal class QuickJsEngine {
     companion object {
         private const val EVALUATION_TIMEOUT_MS = 10_000L
-        private const val NATIVE_MEMORY_LIMIT_BYTES = 64L * 1024L * 1024L
+
+        // Current ~2.6 MiB player scripts need more than 128 MiB while EJS builds their AST.
+        private const val NATIVE_MEMORY_LIMIT_BYTES = 192L * 1024L * 1024L
         private const val MAX_EVALUATION_RESULT_LENGTH = 16 * 1024 * 1024
         private const val MAX_FUNCTION_INPUT_LENGTH = 64 * 1024
         private const val MAX_FUNCTION_RESULT_LENGTH = 256 * 1024

@@ -10,3 +10,5 @@ out/
 *.asc
 secrets.properties
 innertube_cookie.txt
+*.har
+*.pcap
