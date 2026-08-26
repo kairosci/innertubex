@@ -48,7 +48,7 @@ internal class PlayerClientDirector(
         private const val PO_TOKEN_FETCH_TIMEOUT_MS = 18_000L
         private const val DEFAULT_PLAYER_REQUEST_TIMEOUT_MS = 8_000L
         private const val DEFAULT_VISITOR_DATA_FETCH_TIMEOUT_MS = 8_000L
-        private const val DEFAULT_MAX_PLAYER_REQUESTS = 3
+        private val DEFAULT_MAX_PLAYER_REQUESTS = PlaybackClientCatalog.automaticManifests.size * 2
         private const val MAX_PLAYER_RESPONSE_BYTES = 4 * 1024 * 1024
         private const val MAX_PLAYER_FORMATS = 2048
         private val DYNAMIC_WEB_VERSION_CLIENT_NAMES = setOf("WEB", "WEB_EMBEDDED_PLAYER")

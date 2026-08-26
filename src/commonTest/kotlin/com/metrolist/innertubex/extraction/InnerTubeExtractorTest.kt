@@ -252,6 +252,45 @@ class InnerTubeExtractorTest {
     }
 
     @Test
+    fun automaticFallbackReachesSabrAfterDirectClientsFail() =
+        runBlocking {
+            var requests = 0
+            val client =
+                HttpClient(
+                    MockEngine {
+                        requests++
+                        respond(
+                            if (requests <= 4) UNPLAYABLE_RESPONSE else SABR_RESPONSE,
+                            HttpStatusCode.OK,
+                            headersOf("Content-Type", "application/json"),
+                        )
+                    },
+                ) {
+                    install(ContentNegotiation) { json(Json { ignoreUnknownKeys = true }) }
+                }
+            val sabrManifest = checkNotNull(PlaybackClientCatalog.findManifest("WEB_REMIX_SABR"))
+            val selectedClients =
+                listOf(
+                    YouTubeClient.VISIONOS,
+                    YouTubeClient.VISIONOS_0_1,
+                    YouTubeClient.ANDROID_VR_1_65_10,
+                    YouTubeClient.TVHTML5_SIMPLY,
+                ).map(::SelectedClient) + SelectedClient(sabrManifest.client, sabrManifest)
+            val fallback =
+                object : ClientFallbackStrategy {
+                    override fun resolveClients(hints: ContentHints) = selectedClients.map(SelectedClient::client)
+
+                    override fun selectClients(request: ClientSelectionRequest) = ClientSelectionResult(selectedClients)
+                }
+
+            val stream = extractor(client, fallback).extract("video", ContentHints(isExplicit = true))
+
+            assertNotNull(stream)
+            assertEquals("WEB_REMIX_SABR__nopo", stream.profileId)
+            client.close()
+        }
+
+    @Test
     fun sabrResponseBuildsAudioBootstrap() =
         runBlocking {
             val client = jsonClient(SABR_RESPONSE)
@@ -446,6 +485,11 @@ class InnerTubeExtractorTest {
         val BOUNDED_VIDEO_RESPONSE =
             """
             {"playabilityStatus":{"status":"OK"},"streamingData":{"adaptiveFormats":[{"itag":251,"url":"https://r.googlevideo.com/videoplayback?stream=audio","mimeType":"audio/webm","bitrate":128000,"contentLength":1234},{"itag":136,"url":"https://r.googlevideo.com/videoplayback?stream=video","mimeType":"video/mp4; codecs=\"avc1\"","bitrate":1000000,"width":1280,"height":720}]}}
+            """.trimIndent()
+
+        val UNPLAYABLE_RESPONSE =
+            """
+            {"playabilityStatus":{"status":"UNPLAYABLE","reason":"unavailable"}}
             """.trimIndent()
 
         val SABR_RESPONSE =

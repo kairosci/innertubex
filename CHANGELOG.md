@@ -6,6 +6,12 @@ that `0.x` releases may contain breaking API changes.
 
 ## [Unreleased]
 
+## [0.2.2] - 2026-08-26
+
+### Fixed
+
+- Automatic extraction now exhausts eligible direct clients before trying every eligible SABR fallback.
+
 ## [0.2.1] - 2026-08-25
 
 ### Added

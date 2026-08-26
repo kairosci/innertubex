@@ -65,7 +65,7 @@ class InnerTubeExtractor internal constructor(
         private const val PREWARM_VIDEO_ID = "dQw4w9WgXcQ"
         private const val WEB_EMBEDDED_PLAYER_ID = "WEB_EMBEDDED_PLAYER"
         private const val WEB_KIDS_ID = "WEB_KIDS"
-        private const val MAX_PLAYER_REQUESTS_PER_EXTRACTION = 4
+        private val MAX_PLAYER_REQUESTS_PER_EXTRACTION = PlaybackClientCatalog.automaticManifests.size * 2 + 2
     }
 
     private data class CachedPlayerConfig(
