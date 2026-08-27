@@ -13,12 +13,21 @@ class WebPageAttestationChallengeTest {
             "https://www.gstatic.com/botguard.js",
             requireTrustedAttestationInterpreterUrl("//www.gstatic.com/botguard.js"),
         )
+        assertEquals(
+            "https://www.google.com/js/th/Fg54iyAtrBqvUWW6KE6BOe068ROoHjedFsFuJo_8vFk.js",
+            requireTrustedAttestationInterpreterUrl(
+                "https://www.google.com/js/th/Fg54iyAtrBqvUWW6KE6BOe068ROoHjedFsFuJo_8vFk.js",
+            ),
+        )
         listOf(
             "https://example.com/botguard.js",
             "http://www.gstatic.com/botguard.js",
             "https://www.gstatic.com:8443/botguard.js",
             "https://user@www.gstatic.com/botguard.js",
             "https://www.gstatic.com/other.js",
+            "https://www.gstatic.com/js/th/Fg54iyAtrBqvUWW6KE6BOe068ROoHjedFsFuJo_8vFk.js",
+            "https://www.google.com/js/th/short.js",
+            "https://www.google.com/js/th/valid_but_nested/path.js",
         ).forEach { value ->
             assertFailsWith<PoTokenException> { requireTrustedAttestationInterpreterUrl(value) }
         }
@@ -64,12 +73,14 @@ class WebPageAttestationChallengeTest {
         assertFailsWith<PoTokenException> { u8ToBase64("0,256") }
         assertFailsWith<PoTokenException> { u8ToBase64("0,-1") }
         assertFailsWith<PoTokenException> { parseIntegrityTokenData("[]") }
+        assertFailsWith<PoTokenException> { parseIntegrityTokenData("[\"AQID\",1,2,3]") }
         assertFailsWith<PoTokenException> { parseIntegrityTokenData("[\"not base64!\",1]") }
     }
 
     @Test
     fun parsesIntegrityTokenWithStandardAndUrlSafeBase64() {
         assertEquals("new Uint8Array([1,2,3])", parseIntegrityTokenData("[\"AQID\",120]").tokenJavaScript)
+        assertEquals("new Uint8Array([1,2,3])", parseIntegrityTokenData("[\"AQID\",120,60]").tokenJavaScript)
         assertEquals("new Uint8Array([251,239])", parseIntegrityTokenData("[\"--8=\",120]").tokenJavaScript)
     }
 

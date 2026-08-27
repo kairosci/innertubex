@@ -262,7 +262,14 @@ class YouTubeCipherService(
                                 ejs.solve(
                                     playerUrl = playerUrl,
                                     fullPlayerJs = code,
-                                    requestOrder = listOf("sig" to missingSigChallenges),
+                                    requestOrder =
+                                        buildList {
+                                            add("sig" to missingSigChallenges)
+                                            initialNChallenges
+                                                .filterNot { it in solvedNFromSignaturePass }
+                                                .takeIf { it.isNotEmpty() }
+                                                ?.let { add("n" to it) }
+                                        },
                                     preferPreprocessed = preferLocalPreprocessed,
                                 )
                             }

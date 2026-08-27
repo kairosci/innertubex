@@ -65,7 +65,7 @@ public fun requireTrustedAttestationInterpreterUrl(value: String): String {
         url.host !in TRUSTED_INTERPRETER_HOSTS ||
         url.user != null ||
         url.password != null ||
-        url.encodedPath != TRUSTED_INTERPRETER_PATH
+        !isTrustedInterpreterPath(url.host, url.encodedPath)
     ) {
         throw PoTokenException("BotGuard returned an untrusted interpreter URL")
     }
@@ -112,7 +112,7 @@ public fun parseIntegrityTokenData(rawIntegrityTokenData: String): IntegrityToke
     requireSize(rawIntegrityTokenData, INTEGRITY_LIMIT, "integrity response")
     return runCatching {
         val data = Json.parseToJsonElement(rawIntegrityTokenData).jsonArray
-        if (data.size != 2) throw PoTokenException("Invalid BotGuard integrity response")
+        if (data.size !in 2..3) throw PoTokenException("Invalid BotGuard integrity response")
         val token = base64ToU8(data[0].jsonPrimitive.content)
         IntegrityTokenData(token, data[1].jsonPrimitive.long)
     }.getOrElse { error ->
@@ -161,5 +161,11 @@ private fun base64ToU8(base64: String): String {
 private fun newUint8Array(contents: ByteArray): String =
     "new Uint8Array([${contents.joinToString(",") { (it.toInt() and 0xff).toString() }}])"
 
+private fun isTrustedInterpreterPath(
+    host: String,
+    path: String,
+): Boolean =
+    path == "/botguard.js" ||
+        (host == "www.google.com" && path.matches(Regex("^/js/th/[A-Za-z0-9_-]{20,256}\\.js$")))
+
 private val TRUSTED_INTERPRETER_HOSTS = setOf("www.google.com", "www.gstatic.com")
-private const val TRUSTED_INTERPRETER_PATH = "/botguard.js"

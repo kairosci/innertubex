@@ -21,6 +21,7 @@ import com.metrolist.innertubex.models.response.PlayerResponse
 import com.metrolist.innertubex.w
 import io.ktor.http.isSuccess
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.withTimeout
 import kotlinx.coroutines.withTimeoutOrNull
@@ -63,6 +64,7 @@ internal class PlayerClientDirector(
         directAudioOnlyClients: Boolean = false,
         wantVideo: Boolean = false,
         requestBudget: PlayerRequestBudget? = null,
+        prefetchedPoToken: Deferred<PoTokenResult?>? = null,
     ): PlayerResponseBatch {
         val startTime = Clock.System.now().toEpochMilliseconds()
         val initialSession = innerTube.sessionSnapshot()
@@ -130,10 +132,12 @@ internal class PlayerClientDirector(
             requestBudget ?: PlayerRequestBudget(if (hints.playbackClientOverrideId != null) 1 else maxPlayerRequests)
         var requestsConsumedInBatch = 0
         var forceTokenizedTvHtml5 = false
+        val unavailablePoTokenCookieModes = mutableSetOf<Boolean>()
         for (declaredClient in clients) {
             if (requestsConsumedInBatch >= maxPlayerRequests || effectiveRequestBudget.remaining <= 0) break
             val selectedClient = declaredClient.withPlayerConfigVersion(playerConfig)
             val client = selectedClient.client
+            val tokenUsesCookie = selectedClient.manifest?.request?.cookies != false
             val untokenizedProfileFailed =
                 selectedClient.canUsePoTokens() &&
                     selectedClient.profileIds(usedPoToken = false).any { it in excludedClients }
@@ -157,7 +161,10 @@ internal class PlayerClientDirector(
                             ),
                     requestSession = requestSession,
                     requestBudget = effectiveRequestBudget,
+                    poTokenFetchUnavailable = tokenUsesCookie in unavailablePoTokenCookieModes,
+                    prefetchedPoToken = prefetchedPoToken,
                 )
+            if (attemptResult.tokenFetchUnavailable) unavailablePoTokenCookieModes += tokenUsesCookie
             requestsConsumedInBatch += remainingBeforeAttempt - effectiveRequestBudget.remaining
             val attempt = attemptResult.attempt
             selectedClient.manifest?.id?.let { manifestId ->
@@ -351,10 +358,20 @@ internal class PlayerClientDirector(
         forcePoToken: Boolean,
         requestSession: InnerTube.SessionSnapshot,
         requestBudget: PlayerRequestBudget,
+        poTokenFetchUnavailable: Boolean,
+        prefetchedPoToken: Deferred<PoTokenResult?>?,
     ): ClientAttemptResult =
         try {
             val client = selectedClient.client
             val tokenPlan = selectedClient.tokenPlan()
+            if (poTokenFetchUnavailable && tokenPlan.tokenRequired && !allowUntokenizedWebPoClient) {
+                return ClientAttemptResult(
+                    attempt = null,
+                    failure = null,
+                    tokenUnavailable = true,
+                    tokenFetchUnavailable = true,
+                )
+            }
             if ((forcePoToken || tokenPlan.playerRequired) && tokenPlan.canMint) {
                 logger.d(TAG, "tokenized request selected", details = mapOf("client" to client.clientName))
                 return tryTokenizedPlayer(
@@ -366,6 +383,8 @@ internal class PlayerClientDirector(
                     fallbackFailure = null,
                     existingPlayableResponse = null,
                     requestBudget = requestBudget,
+                    poTokenFetchUnavailable = poTokenFetchUnavailable,
+                    prefetchedPoToken = prefetchedPoToken,
                 )
             }
 
@@ -429,6 +448,8 @@ internal class PlayerClientDirector(
                 fallbackFailure = initialFailure.takeUnless { initialPlayable },
                 existingPlayableResponse = initialResponse.takeIf { initialPlayable },
                 requestBudget = requestBudget,
+                poTokenFetchUnavailable = poTokenFetchUnavailable,
+                prefetchedPoToken = prefetchedPoToken,
             )
         } catch (e: CancellationException) {
             throw e
@@ -455,7 +476,17 @@ internal class PlayerClientDirector(
         fallbackFailure: PlayabilityFailure?,
         existingPlayableResponse: PlayerResponse?,
         requestBudget: PlayerRequestBudget,
+        poTokenFetchUnavailable: Boolean,
+        prefetchedPoToken: Deferred<PoTokenResult?>?,
     ): ClientAttemptResult {
+        if (poTokenFetchUnavailable) {
+            return ClientAttemptResult(
+                attempt = null,
+                failure = fallbackFailure,
+                tokenUnavailable = true,
+                tokenFetchUnavailable = true,
+            )
+        }
         val client = selectedClient.client
         val tokenStart = Clock.System.now().toEpochMilliseconds()
         val tokenRequestSession =
@@ -477,11 +508,17 @@ internal class PlayerClientDirector(
         val visitorData = checkNotNull(tokenRequestSession.visitorData)
         val token =
             withTimeoutOrNull(PO_TOKEN_FETCH_TIMEOUT_MS.milliseconds) {
-                tokenProvider.getPoToken(
-                    videoId,
-                    visitorData,
-                    tokenRequestSession.cookie.takeIf { selectedClient.manifest?.request?.cookies != false },
-                )
+                val prefetched =
+                    prefetchedPoToken
+                        ?.takeIf { selectedClient.manifest?.request?.cookies != false }
+                        ?.await()
+                        ?.takeIf { it.visitorData == visitorData }
+                prefetched
+                    ?: tokenProvider.getPoToken(
+                        videoId,
+                        visitorData,
+                        tokenRequestSession.cookie.takeIf { selectedClient.manifest?.request?.cookies != false },
+                    )
             }
         val tokenElapsed = Clock.System.now().toEpochMilliseconds() - tokenStart
         logger.d(
@@ -500,10 +537,16 @@ internal class PlayerClientDirector(
             (tokenPlan.playerRequired && playerRequestPoToken.isNullOrBlank()) ||
                 (tokenPlan.gvsRequired && streamingDataPoToken.isNullOrBlank())
         val noUsableToken = playerRequestPoToken.isNullOrBlank() && streamingDataPoToken.isNullOrBlank()
-        if (token == null || token.visitorData != visitorData || missingRequiredToken || noUsableToken) {
-            if (token != null) {
-                logger.w(TAG, "token binding rejected", details = mapOf("client" to client.clientName))
-            }
+        if (token == null) {
+            return ClientAttemptResult(
+                attempt = null,
+                failure = fallbackFailure,
+                tokenUnavailable = true,
+                tokenFetchUnavailable = true,
+            )
+        }
+        if (token.visitorData != visitorData || missingRequiredToken || noUsableToken) {
+            logger.w(TAG, "token binding rejected", details = mapOf("client" to client.clientName))
             return ClientAttemptResult(null, fallbackFailure, tokenUnavailable = true)
         }
 
@@ -838,6 +881,7 @@ internal class PlayerClientDirector(
         val failure: PlayabilityFailure?,
         val requestFailure: Throwable? = null,
         val tokenUnavailable: Boolean = false,
+        val tokenFetchUnavailable: Boolean = false,
     )
 
     private class PlayerRequestTimeoutException(

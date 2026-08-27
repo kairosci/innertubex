@@ -18,8 +18,10 @@ import io.ktor.http.HttpStatusCode
 import io.ktor.http.headersOf
 import io.ktor.serialization.kotlinx.json.json
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withTimeout
 import kotlinx.serialization.json.Json
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -305,6 +307,63 @@ class InnerTubeExtractorTest {
 
             assertNotNull(stream)
             assertEquals("WEB_REMIX_SABR__nopo", stream.profileId)
+            client.close()
+        }
+
+    @Test
+    fun explicitTokenMintStartsWhilePlayerConfigLoads() =
+        runBlocking {
+            val client = jsonClient(DIRECT_RESPONSE)
+            val innerTube = InnerTube(client, retryDelay = {}).also { it.visitorData = "visitor" }
+            val configStarted = CompletableDeferred<Unit>()
+            val tokenStarted = CompletableDeferred<Unit>()
+            val parser =
+                object : YtConfigParser {
+                    override suspend fun fetchConfig(
+                        videoId: String,
+                        useLoginCookies: Boolean,
+                    ): PlayerConfig {
+                        configStarted.complete(Unit)
+                        tokenStarted.await()
+                        return PlayerConfig("https://www.youtube.com/s/player/test/base.js", 123, null, null)
+                    }
+                }
+            var tokenCalls = 0
+            val tokenProvider =
+                object : TokenProvider {
+                    override val capabilities =
+                        TokenProviderCapabilities(providers = setOf(PoTokenProviderKind.WEB_BOTGUARD))
+
+                    override suspend fun getPoToken(
+                        videoId: String,
+                        visitorData: String,
+                        cookie: String?,
+                    ): PoTokenResult {
+                        tokenCalls++
+                        configStarted.await()
+                        tokenStarted.complete(Unit)
+                        return PoTokenResult("player-token", "AQID", visitorData)
+                    }
+                }
+            val manifest = checkNotNull(PlaybackClientCatalog.findManifest("WEB_REMIX"))
+            val fallback =
+                object : ClientFallbackStrategy {
+                    override fun resolveClients(hints: ContentHints) = listOf(manifest.client)
+
+                    override fun selectClients(request: ClientSelectionRequest) =
+                        ClientSelectionResult(listOf(SelectedClient(manifest.client, manifest)))
+                }
+            val extractor =
+                InnerTubeExtractor(
+                    configParser = parser,
+                    cipherService = YouTubeCipherService(client),
+                    innerTube = innerTube,
+                    fallbackStrategy = fallback,
+                    tokenProvider = tokenProvider,
+                )
+
+            assertNotNull(withTimeout(5_000) { extractor.extract("video", ContentHints(isExplicit = true)) })
+            assertEquals(1, tokenCalls)
             client.close()
         }
 

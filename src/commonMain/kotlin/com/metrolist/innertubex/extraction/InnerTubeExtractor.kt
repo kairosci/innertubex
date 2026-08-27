@@ -18,6 +18,7 @@ import com.metrolist.innertubex.w
 import io.ktor.http.URLProtocol
 import io.ktor.http.Url
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.sync.Mutex
@@ -33,6 +34,7 @@ class InnerTubeExtractor internal constructor(
     private val clientDirector: PlayerClientDirector,
     private val cipherService: ExtractionCipherService,
     private val innerTube: InnerTube,
+    private val tokenProvider: TokenProvider = UnavailableTokenProvider,
     private val logger: InnerTubeLogger = InnerTubeLogger.NONE,
 ) : StreamExtractor {
     constructor(
@@ -55,6 +57,7 @@ class InnerTubeExtractor internal constructor(
             ),
         cipherService = DefaultExtractionCipherService(cipherService),
         innerTube = innerTube,
+        tokenProvider = tokenProvider ?: UnavailableTokenProvider,
         logger = logger,
     )
 
@@ -65,6 +68,7 @@ class InnerTubeExtractor internal constructor(
         private const val PREWARM_VIDEO_ID = "dQw4w9WgXcQ"
         private const val WEB_EMBEDDED_PLAYER_ID = "WEB_EMBEDDED_PLAYER"
         private const val WEB_KIDS_ID = "WEB_KIDS"
+        private val PO_TOKEN_PREFETCH_TIMEOUT = 18.seconds
         private val MAX_PLAYER_REQUESTS_PER_EXTRACTION = PlaybackClientCatalog.automaticManifests.size * 2 + 2
     }
 
@@ -132,7 +136,40 @@ class InnerTubeExtractor internal constructor(
                 maxPlayerRequests = if (hints.playbackClientOverrideId != null) 1 else MAX_PLAYER_REQUESTS_PER_EXTRACTION,
             )
         return try {
-            extractWithDiagnostics(videoId, hints, excludedClients, audioQuality, clientPlaybackNonce, totalStart, diagnostics)
+            coroutineScope {
+                val session = innerTube.sessionSnapshot()
+                val prefetchedPoToken =
+                    if (
+                        hints.isExplicit == true &&
+                        hints.playbackClientOverrideId == null &&
+                        !session.visitorData.isNullOrBlank() &&
+                        tokenProvider.capabilities.providers.isNotEmpty()
+                    ) {
+                        async {
+                            withTimeoutOrNull(PO_TOKEN_PREFETCH_TIMEOUT) {
+                                try {
+                                    tokenProvider.getPoToken(videoId, session.visitorData, session.cookie)
+                                } catch (e: CancellationException) {
+                                    throw e
+                                } catch (_: Exception) {
+                                    null
+                                }
+                            }
+                        }
+                    } else {
+                        null
+                    }
+                extractWithDiagnostics(
+                    videoId,
+                    hints,
+                    excludedClients,
+                    audioQuality,
+                    clientPlaybackNonce,
+                    totalStart,
+                    diagnostics,
+                    prefetchedPoToken,
+                )
+            }
         } catch (e: CancellationException) {
             throw e
         } catch (e: StreamResolveException) {
@@ -161,6 +198,7 @@ class InnerTubeExtractor internal constructor(
         clientPlaybackNonce: String,
         totalStart: Long,
         diagnostics: ExtractionDiagnostics,
+        prefetchedPoToken: Deferred<PoTokenResult?>? = null,
     ): ExtractedStream? {
         logger.d(
             TAG,
@@ -201,6 +239,7 @@ class InnerTubeExtractor internal constructor(
                 totalStartMs = totalStart,
                 audioQuality = audioQuality,
                 diagnostics = diagnostics,
+                prefetchedPoToken = prefetchedPoToken,
             )
         if (stream != null) return stream
 
@@ -216,6 +255,7 @@ class InnerTubeExtractor internal constructor(
                     totalStartMs = totalStart,
                     audioQuality = audioQuality,
                     diagnostics = diagnostics,
+                    prefetchedPoToken = prefetchedPoToken,
                 )
             if (authenticatedStream != null) return authenticatedStream
         }
@@ -398,6 +438,7 @@ class InnerTubeExtractor internal constructor(
         totalStartMs: Long,
         audioQuality: AudioQuality = AudioQuality.AUTO,
         diagnostics: ExtractionDiagnostics,
+        prefetchedPoToken: Deferred<PoTokenResult?>? = null,
     ): ExtractedStream? {
         val nowMs = Clock.System.now().toEpochMilliseconds()
         val cachedConfig = getCachedPlayerConfig(useLoginCookies, nowMs)
@@ -424,6 +465,7 @@ class InnerTubeExtractor internal constructor(
                     totalStartMs = totalStartMs,
                     audioQuality = audioQuality,
                     diagnostics = diagnostics,
+                    prefetchedPoToken = prefetchedPoToken,
                 )
             if (cachedStream != null) return cachedStream
             logger.w(TAG, "watch page cache unusable", details = mapOf("authenticated" to useLoginCookies.toString()))
@@ -465,6 +507,7 @@ class InnerTubeExtractor internal constructor(
             totalStartMs = totalStartMs,
             audioQuality = audioQuality,
             diagnostics = diagnostics,
+            prefetchedPoToken = prefetchedPoToken,
         )
     }
 
@@ -517,6 +560,7 @@ class InnerTubeExtractor internal constructor(
         allowCipherProcessing: Boolean = true,
         audioQuality: AudioQuality = AudioQuality.AUTO,
         diagnostics: ExtractionDiagnostics,
+        prefetchedPoToken: Deferred<PoTokenResult?>? = null,
     ): ExtractedStream? {
         if (diagnostics.requestBudget.remaining <= 0) return null
         logger.d(
@@ -540,6 +584,7 @@ class InnerTubeExtractor internal constructor(
                 directAudioOnlyClients = !allowCipherProcessing && !hints.wantVideo,
                 wantVideo = hints.wantVideo,
                 requestBudget = diagnostics.requestBudget,
+                prefetchedPoToken = prefetchedPoToken,
             )
         diagnostics.failures += batch.failures
         diagnostics.requestFailures += batch.requestFailures

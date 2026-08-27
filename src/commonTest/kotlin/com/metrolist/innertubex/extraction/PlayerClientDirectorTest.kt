@@ -102,6 +102,52 @@ class PlayerClientDirectorTest {
         }
 
     @Test
+    fun unavailablePoTokenIsRequestedOnlyOncePerBatch() =
+        runBlocking {
+            val client = client { PLAYER_RESPONSE }
+            val innerTube =
+                InnerTube(client, retryDelay = {}).also {
+                    it.visitorData = "visitor"
+                    it.cookie = "SAPISID=test"
+                }
+            var tokenRequests = 0
+            val provider =
+                object : TokenProvider {
+                    override val capabilities =
+                        TokenProviderCapabilities(setOf(PoTokenProviderKind.WEB_BOTGUARD), usesWebView = true)
+
+                    override suspend fun getPoToken(
+                        videoId: String,
+                        visitorData: String,
+                        cookie: String?,
+                    ): PoTokenResult? {
+                        tokenRequests++
+                        return null
+                    }
+                }
+            val manifests =
+                listOf("WEB_REMIX", "WEB_CREATOR").map { id ->
+                    checkNotNull(PlaybackClientCatalog.findManifest(id))
+                }
+            val director =
+                PlayerClientDirector(
+                    innerTube,
+                    object : ClientFallbackStrategy {
+                        override fun resolveClients(hints: ContentHints) = manifests.map { it.client }
+
+                        override fun selectClients(request: ClientSelectionRequest) =
+                            ClientSelectionResult(manifests.map { SelectedClient(it.client, it) })
+                    },
+                    provider,
+                )
+
+            director.fetchPlayerResponses("video", PlayerConfig("player.js", null, null, null), ContentHints())
+
+            assertEquals(1, tokenRequests)
+            client.close()
+        }
+
+    @Test
     fun stalledClientTimesOutAndFallsThrough() =
         runBlocking {
             var requests = 0
