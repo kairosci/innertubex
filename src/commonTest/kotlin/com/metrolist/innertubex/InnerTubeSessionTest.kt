@@ -498,6 +498,25 @@ class InnerTubeSessionTest {
         }
 
     @Test
+    fun uploadRejectsUnexpectedYouTubeSessionPath() =
+        runBlocking {
+            val engine =
+                MockEngine {
+                    respond(
+                        content = "",
+                        status = HttpStatusCode.OK,
+                        headers = headersOf("X-Goog-Upload-URL", "https://upload.youtube.com/not-upload"),
+                    )
+                }
+            val innerTube = InnerTube(HttpClient(engine)).also { it.cookie = "SAPISID=secret" }
+
+            assertFailsWith<IllegalArgumentException> {
+                innerTube.uploadSong("track.mp3", byteArrayOf(1))
+            }
+            assertEquals(1, engine.requestHistory.size)
+        }
+
+    @Test
     fun uploadRejectsOversizedContentBeforeRequest() =
         runBlocking {
             val engine = MockEngine { respondOk() }
@@ -528,9 +547,15 @@ class InnerTubeSessionTest {
                         respond(
                             content = "",
                             status = HttpStatusCode.OK,
-                            headers = headersOf("X-Goog-Upload-URL", "https://upload.youtube.com/upload/session"),
+                            headers =
+                                headersOf(
+                                    "X-Goog-Upload-URL",
+                                    "https://upload.youtube.com/?authuser=0&upload_id=session&upload_protocol=resumable",
+                                ),
                         )
                     } else {
+                        assertEquals("/", request.url.encodedPath)
+                        assertEquals("session", request.url.parameters["upload_id"])
                         val body = request.body as OutgoingContent.ReadChannelContent
                         assertEquals(content.size.toLong(), body.contentLength)
                         assertEquals(ContentType.Application.OctetStream, body.contentType)

@@ -1142,7 +1142,7 @@ class InnerTube(
             url.protocol.name == "https" &&
                 url.port == 443 &&
                 url.host == "upload.youtube.com" &&
-                url.encodedPath.startsWith("/upload/") &&
+                (url.encodedPath == "/" || url.encodedPath.startsWith("/upload/")) &&
                 !url.hasUserInfo(),
         ) {
             "Upload session URL must use the approved YouTube HTTPS endpoint"
