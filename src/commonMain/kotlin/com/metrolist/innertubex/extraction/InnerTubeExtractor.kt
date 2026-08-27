@@ -886,7 +886,7 @@ class InnerTubeExtractor internal constructor(
                         .processFormats(
                             playerUrl = playerConfig.playerUrl,
                             formats = listOf(preferredRawVideoFormat),
-                        ).firstOrNull { !it.url.isNullOrBlank() && !it.url.hasNParameter() }
+                        ).firstOrNull { !it.url.isNullOrBlank() }
                 } else {
                     null
                 }
@@ -903,7 +903,7 @@ class InnerTubeExtractor internal constructor(
             )
 
             var audioFormats = processedFormats
-            var usableAudioFormats = audioFormats.filter { !it.url.isNullOrBlank() && !it.url.hasNParameter() }
+            var usableAudioFormats = audioFormats.filter { !it.url.isNullOrBlank() }
             var directUrlAudioFormats = usableAudioFormats.filter { it.itag in directAudioItags }
             var selectionPool =
                 directUrlAudioFormats.ifEmpty { usableAudioFormats }
@@ -927,7 +927,7 @@ class InnerTubeExtractor internal constructor(
                         ),
                 )
                 audioFormats = processedFormats
-                usableAudioFormats = audioFormats.filter { !it.url.isNullOrBlank() && !it.url.hasNParameter() }
+                usableAudioFormats = audioFormats.filter { !it.url.isNullOrBlank() }
                 directUrlAudioFormats = usableAudioFormats.filter { it.itag in directAudioItags }
                 selectionPool =
                     directUrlAudioFormats.ifEmpty { usableAudioFormats }

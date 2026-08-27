@@ -53,6 +53,24 @@ class InnerTubeExtractorTest {
         }
 
     @Test
+    fun transformedNParameterRemainsUsable() =
+        runBlocking {
+            val client = jsonClient(DIRECT_RESPONSE.replace("expire=9999999999", "expire=9999999999&n=source"))
+            val innerTube = InnerTube(client, retryDelay = {})
+            val stream =
+                makeExtractor(
+                    client,
+                    innerTube,
+                    CountingParser(),
+                    cipherService = NTransformCipherService,
+                ).extract("video", ContentHints(isExplicit = true))
+
+            assertNotNull(stream)
+            assertTrue(stream.audioUrl.contains("n=solved"))
+            client.close()
+        }
+
+    @Test
     fun maxVideoHeightIsPassedToDirectSelection() =
         runBlocking {
             val client = jsonClient(VIDEO_RESPONSE)
@@ -454,6 +472,20 @@ class InnerTubeExtractorTest {
             visitorData: String,
             cookie: String?,
         ) = null
+    }
+
+    private object NTransformCipherService : ExtractionCipherService {
+        override suspend fun initialize() {}
+
+        override suspend fun preloadPlayerCode(playerUrl: String) {}
+
+        override suspend fun prewarmEjs() {}
+
+        override suspend fun processFormats(
+            playerUrl: String,
+            formats: List<PlayerResponse.StreamingData.Format>,
+        ): List<PlayerResponse.StreamingData.Format> =
+            formats.map { format -> format.copy(url = format.url?.replace("n=source", "n=solved")) }
     }
 
     private object AudioOnlyCipherService : ExtractionCipherService {
