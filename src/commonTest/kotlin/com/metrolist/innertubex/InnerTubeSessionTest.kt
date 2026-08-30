@@ -380,14 +380,6 @@ class InnerTubeSessionTest {
         }
 
     @Test
-    fun systemLocaleRetainsLanguageScriptAndUsesCountryForRegion() {
-        val locale = YouTubeLocale(gl = "TW", hl = "zh-Hant-TW")
-
-        assertEquals("zh-Hant-TW", locale.hl)
-        assertEquals("TW", locale.gl)
-    }
-
-    @Test
     fun bulkSessionReplacementNeverPublishesMixedIdentity() {
         runBlocking {
             val innerTube = InnerTube(HttpClient(MockEngine { respondOk() }))

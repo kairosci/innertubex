@@ -1,5 +1,7 @@
 package com.metrolist.innertubex.utils
 
+import io.ktor.http.decodeURLQueryComponent
+
 /** Normalizes a Cookie-header value without exposing or parsing its sensitive contents. */
 public fun sanitizeCookieString(cookie: String): String {
     val normalized = cookie.filterNot { it == '\r' || it == '\n' || it == '\t' }
@@ -24,39 +26,7 @@ private fun String.removePrefixIgnoreCase(prefix: String): String =
     if (startsWith(prefix, ignoreCase = true)) substring(prefix.length) else this
 
 /** Decodes a percent-encoded query component without JVM java.net dependencies. */
-internal fun decodeQueryComponent(encoded: String): String {
-    val bytes = ArrayList<Byte>(encoded.length)
-    var i = 0
-    while (i < encoded.length) {
-        val c = encoded[i]
-        when (c) {
-            '+' -> {
-                bytes.add(' '.code.toByte())
-                i++
-            }
-
-            '%' -> {
-                if (i + 2 < encoded.length) {
-                    val hex = encoded.substring(i + 1, i + 3)
-                    val byteVal = hex.toIntOrNull(16)
-                    if (byteVal != null) {
-                        bytes.add(byteVal.toByte())
-                        i += 3
-                        continue
-                    }
-                }
-                bytes.add('%'.code.toByte())
-                i++
-            }
-
-            else -> {
-                bytes.add(c.code.toByte())
-                i++
-            }
-        }
-    }
-    return bytes.toByteArray().decodeToString()
-}
+internal fun decodeQueryComponent(encoded: String): String = encoded.decodeURLQueryComponent(plusIsSpace = true)
 
 // Expect declaration for platform-specific SHA-1 implementation
 

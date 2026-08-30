@@ -83,7 +83,6 @@ class InnerTube(
     val httpClient: HttpClient,
     private val retryDelay: suspend (kotlin.time.Duration) -> Unit = { delay(it) },
     private val logger: InnerTubeLogger = InnerTubeLogger.NONE,
-    initialSession: SessionSnapshot = SessionSnapshot(),
 ) {
     private companion object {
         private const val TAG = "InnerTube"

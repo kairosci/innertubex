@@ -1,3 +1,3 @@
 package com.metrolist.innertubex.models
 
-expect fun defaultYouTubeLocale(): YouTubeLocale
+internal expect fun defaultYouTubeLocale(): YouTubeLocale

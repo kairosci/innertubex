@@ -3,15 +3,17 @@ package com.metrolist.innertubex.models
 import platform.Foundation.NSLocale
 import platform.Foundation.countryCode
 import platform.Foundation.currentLocale
-import platform.Foundation.languageCode
+import platform.Foundation.localeIdentifier
+import platform.Foundation.preferredLanguages
 
-actual fun defaultYouTubeLocale(): YouTubeLocale {
+internal actual fun defaultYouTubeLocale(): YouTubeLocale {
     val current = NSLocale.currentLocale
-    val country = current.countryCode?.uppercase() ?: "US"
-    val language = current.languageCode
-    val languageTag = if (country.isNotBlank()) "$language-$country" else language
+    val language =
+        (NSLocale.preferredLanguages.firstOrNull() as? String)
+            ?.takeIf(String::isNotBlank)
+            ?: current.localeIdentifier
     return YouTubeLocale(
-        gl = country,
-        hl = languageTag,
+        gl = current.countryCode.orEmpty().uppercase(),
+        hl = language.substringBefore('@').replace('_', '-'),
     )
 }
