@@ -79,40 +79,85 @@ class InnerTubeExtractor internal constructor(
         val usedLoginCookies: Boolean,
     )
 
-    private var playerConfigCache: CachedPlayerConfig? = null
+    private val playerConfigCache = mutableMapOf<Boolean, CachedPlayerConfig>()
     private val playerConfigFetchMutex = Mutex()
 
     override suspend fun prewarm() {
         val startMs = Clock.System.now().toEpochMilliseconds()
         try {
-            val config =
+            val initialSession = innerTube.sessionSnapshot()
+            val fetchedVisitorData =
+                if (tokenProvider.capabilities.providers.isNotEmpty()) {
+                    initialSession.visitorData ?: innerTube.fetchFreshVisitorData(initialSession)
+                } else {
+                    null
+                }
+
+            suspend fun fetchConfig(useLoginCookies: Boolean) =
+                playerConfigFetchMutex.withLock {
+                    getCachedPlayerConfigLocked(
+                        useLoginCookies = useLoginCookies,
+                        nowMs = Clock.System.now().toEpochMilliseconds(),
+                    )?.config
+                        ?: run {
+                            val expectedSession = innerTube.sessionSnapshot()
+                            val config = configParser.fetchConfig(PREWARM_VIDEO_ID, useLoginCookies)
+                            if (innerTube.sessionSnapshot() != expectedSession) {
+                                throw CancellationException("InnerTube session changed")
+                            }
+                            cachePlayerConfig(
+                                useLoginCookies = useLoginCookies,
+                                config = config,
+                                sessionIdentity = expectedSession,
+                            ).config
+                        }
+                }
+            val configs =
                 coroutineScope {
-                    val configFetch =
-                        async {
-                            playerConfigFetchMutex.withLock {
-                                getCachedPlayerConfigLocked(
-                                    useLoginCookies = false,
-                                    nowMs = Clock.System.now().toEpochMilliseconds(),
-                                )?.config
-                                    ?: run {
-                                        val expectedSession = innerTube.sessionSnapshot()
-                                        val config = configParser.fetchConfig(PREWARM_VIDEO_ID, useLoginCookies = false)
-                                        if (innerTube.sessionSnapshot() != expectedSession) {
-                                            throw CancellationException("InnerTube session changed")
-                                        }
-                                        cachePlayerConfig(
-                                            useLoginCookies = false,
-                                            config = config,
-                                            sessionIdentity = expectedSession,
-                                        ).config
-                                    }
+                    val defaultConfigFetch = async { fetchConfig(useLoginCookies = false) }
+                    cipherService.initialize()
+                    buildList {
+                        add(defaultConfigFetch.await())
+                        if (innerTube.hasSapCookieAuth()) {
+                            try {
+                                add(fetchConfig(useLoginCookies = true))
+                            } catch (e: CancellationException) {
+                                throw e
+                            } catch (e: Exception) {
+                                logger.w(
+                                    TAG,
+                                    "authenticated player config prewarm failed",
+                                    details = mapOf("exceptionType" to (e::class.simpleName ?: "unknown")),
+                                )
                             }
                         }
-                    cipherService.initialize()
-                    configFetch.await()
+                    }
                 }
-            if (config.playerUrl.isNotBlank()) {
-                cipherService.preloadPlayerCode(config.playerUrl)
+            coroutineScope {
+                val session = innerTube.sessionSnapshot()
+                val tokenWarmup =
+                    (session.visitorData ?: configs.firstNotNullOfOrNull(PlayerConfig::visitorData) ?: fetchedVisitorData)
+                        ?.takeIf { it.isNotBlank() && tokenProvider.capabilities.providers.isNotEmpty() }
+                        ?.let { visitorData ->
+                            async {
+                                withTimeoutOrNull(PO_TOKEN_PREFETCH_TIMEOUT) {
+                                    try {
+                                        tokenProvider.getPoToken(PREWARM_VIDEO_ID, visitorData, session.cookie)
+                                    } catch (e: CancellationException) {
+                                        throw e
+                                    } catch (_: Exception) {
+                                        null
+                                    }
+                                }
+                            }
+                        }
+                // ponytail: prewarm the authenticated player when available.
+                // Warm both only if normal cipher fallbacks become common.
+                configs
+                    .asReversed()
+                    .firstOrNull { it.playerUrl.isNotBlank() }
+                    ?.let { cipherService.preloadPlayerCode(it.playerUrl) }
+                tokenWarmup?.await()
             }
         } catch (e: CancellationException) {
             throw e
@@ -523,18 +568,15 @@ class InnerTubeExtractor internal constructor(
         useLoginCookies: Boolean,
         nowMs: Long,
     ): CachedPlayerConfig? {
-        val cached = playerConfigCache ?: return null
+        val cached = playerConfigCache[useLoginCookies] ?: return null
         val currentSession = innerTube.sessionSnapshot()
-
-        val ageMs = nowMs - cached.cachedAtMs
-        if (ageMs <= PLAYER_CONFIG_CACHE_TTL_MS) {
-            if (cached.usedLoginCookies == useLoginCookies && cached.sessionIdentity == currentSession) return cached
-
+        if (cached.sessionIdentity != currentSession) {
+            playerConfigCache.clear()
             return null
         }
+        if (nowMs - cached.cachedAtMs <= PLAYER_CONFIG_CACHE_TTL_MS) return cached
 
-        playerConfigCache = null
-        // Expired entries are discarded without exposing session identity.
+        playerConfigCache.remove(useLoginCookies)
         return null
     }
 
@@ -548,7 +590,7 @@ class InnerTubeExtractor internal constructor(
             cachedAtMs = Clock.System.now().toEpochMilliseconds(),
             sessionIdentity = sessionIdentity,
             usedLoginCookies = useLoginCookies,
-        ).also { playerConfigCache = it }
+        ).also { playerConfigCache[useLoginCookies] = it }
 
     private suspend fun extractWithConfig(
         videoId: String,

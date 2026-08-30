@@ -6,6 +6,36 @@ that `0.x` releases may contain breaking API changes.
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-08-30
+
+### Fixed
+
+- Prewarm authenticated and anonymous player configurations separately,
+  preprocess the active player script, and mint the initial PO token concurrently
+  to reduce cold protected-playback startup time.
+
+## [0.2.6] - 2026-08-27
+
+### Fixed
+
+- Prefetch PO tokens for protected streams, avoid repeated unavailable-token
+  work across client fallbacks, and solve signature and n-parameter challenges
+  together.
+
+## [0.2.5] - 2026-08-27
+
+### Fixed
+
+- Accept current root-path YouTube resumable upload session URLs while
+  continuing to reject unexpected endpoints.
+
+## [0.2.4] - 2026-08-27
+
+### Fixed
+
+- Retain streams whose n-parameters were successfully transformed by the
+  cipher service.
+
 ## [0.2.3] - 2026-08-27
 
 ### Fixed

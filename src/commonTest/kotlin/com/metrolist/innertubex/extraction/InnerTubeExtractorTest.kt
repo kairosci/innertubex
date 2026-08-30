@@ -114,6 +114,33 @@ class InnerTubeExtractorTest {
         }
 
     @Test
+    fun anonymousAndAuthenticatedPlayerConfigsAreCachedSeparately() =
+        runBlocking {
+            val client = jsonClient(DIRECT_RESPONSE)
+            val innerTube = InnerTube(client, retryDelay = {}).also { it.cookie = "SAPISID=session-cookie" }
+            val modes = mutableListOf<Boolean>()
+            val parser =
+                object : YtConfigParser {
+                    override suspend fun fetchConfig(
+                        videoId: String,
+                        useLoginCookies: Boolean,
+                    ): PlayerConfig {
+                        modes += useLoginCookies
+                        return PlayerConfig("https://www.youtube.com/s/player/test/base.js", 123, null, null)
+                    }
+                }
+            val extractor = makeExtractor(client, innerTube, parser)
+
+            assertNotNull(extractor.extract("normal-one", ContentHints()))
+            assertNotNull(extractor.extract("explicit-one", ContentHints(isExplicit = true)))
+            assertNotNull(extractor.extract("normal-two", ContentHints()))
+            assertNotNull(extractor.extract("explicit-two", ContentHints(isExplicit = true)))
+
+            assertEquals(listOf(false, true), modes)
+            client.close()
+        }
+
+    @Test
     fun invalidPlayerResponseProducesBoundedFailure() =
         runBlocking {
             val client = jsonClient("{\"playabilityStatus\":{\"status\":\"UNPLAYABLE\",\"reason\":\"missing\"}}")
@@ -364,6 +391,57 @@ class InnerTubeExtractorTest {
 
             assertNotNull(withTimeout(5_000) { extractor.extract("video", ContentHints(isExplicit = true)) })
             assertEquals(1, tokenCalls)
+            client.close()
+        }
+
+    @Test
+    fun prewarmMintsPoTokenForCachedVisitor() =
+        runBlocking {
+            val client = jsonClient(DIRECT_RESPONSE)
+            val innerTube =
+                InnerTube(client, retryDelay = {}).also {
+                    it.cookie = "SAPISID=session-cookie"
+                    it.visitorData = "visitor"
+                }
+            val configModes = mutableListOf<Boolean>()
+            var tokenRequest: Triple<String, String, String?>? = null
+            val tokenProvider =
+                object : TokenProvider {
+                    override val capabilities =
+                        TokenProviderCapabilities(providers = setOf(PoTokenProviderKind.WEB_BOTGUARD))
+
+                    override suspend fun getPoToken(
+                        videoId: String,
+                        visitorData: String,
+                        cookie: String?,
+                    ): PoTokenResult {
+                        tokenRequest = Triple(videoId, visitorData, cookie)
+                        return PoTokenResult("player-token", "video-token", visitorData)
+                    }
+                }
+            val parser =
+                object : YtConfigParser {
+                    override suspend fun fetchConfig(
+                        videoId: String,
+                        useLoginCookies: Boolean,
+                    ): PlayerConfig {
+                        configModes += useLoginCookies
+                        return PlayerConfig("", 123, null, null)
+                    }
+                }
+            val extractor =
+                InnerTubeExtractor(
+                    parser,
+                    PlayerClientDirector(innerTube, DirectFallback, tokenProvider),
+                    AudioOnlyCipherService,
+                    innerTube,
+                    tokenProvider = tokenProvider,
+                )
+
+            extractor.prewarm()
+
+            assertEquals(listOf(false, true), configModes)
+            assertEquals(Triple("dQw4w9WgXcQ", "visitor", "SAPISID=session-cookie"), tokenRequest)
             client.close()
         }
 

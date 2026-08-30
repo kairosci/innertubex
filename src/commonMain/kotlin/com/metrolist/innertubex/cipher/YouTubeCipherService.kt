@@ -115,6 +115,7 @@ class YouTubeCipherService(
             val startMs = Clock.System.now().toEpochMilliseconds()
             try {
                 val playerCode = getOrDownloadPlayerCode(playerUrl, cached = null)
+                ejs.solve(playerUrl, playerCode.code, listOf("sig" to listOf("prewarm")))
                 logger.d(
                     TAG,
                     "player JS preload done source=${playerCode.source} size=${playerCode.code.length} elapsed=${Clock.System.now().toEpochMilliseconds() - startMs}ms player=${playerUrl.logId()}",
