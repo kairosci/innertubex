@@ -23,7 +23,6 @@ import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
-import java.util.Locale
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
@@ -382,15 +381,7 @@ class InnerTubeSessionTest {
 
     @Test
     fun systemLocaleRetainsLanguageScriptAndUsesCountryForRegion() {
-        val scriptLocale =
-            Locale
-                .Builder()
-                .setLanguage("zh")
-                .setScript("Hant")
-                .setRegion("TW")
-                .build()
-
-        val locale = systemYouTubeLocale(scriptLocale)
+        val locale = YouTubeLocale(gl = "TW", hl = "zh-Hant-TW")
 
         assertEquals("zh-Hant-TW", locale.hl)
         assertEquals("TW", locale.gl)

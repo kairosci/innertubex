@@ -9,8 +9,8 @@ public final class com/metrolist/innertubex/HttpResponseBodyKt {
 }
 
 public final class com/metrolist/innertubex/InnerTube {
-	public fun <init> (Lio/ktor/client/HttpClient;Lkotlin/jvm/functions/Function2;Lcom/metrolist/innertubex/InnerTubeLogger;)V
-	public synthetic fun <init> (Lio/ktor/client/HttpClient;Lkotlin/jvm/functions/Function2;Lcom/metrolist/innertubex/InnerTubeLogger;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public fun <init> (Lio/ktor/client/HttpClient;Lkotlin/jvm/functions/Function2;Lcom/metrolist/innertubex/InnerTubeLogger;Lcom/metrolist/innertubex/InnerTube$SessionSnapshot;)V
+	public synthetic fun <init> (Lio/ktor/client/HttpClient;Lkotlin/jvm/functions/Function2;Lcom/metrolist/innertubex/InnerTubeLogger;Lcom/metrolist/innertubex/InnerTube$SessionSnapshot;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
 	public final fun accountMenu (Lcom/metrolist/innertubex/models/YouTubeClient;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
 	public final fun accountsList (Lcom/metrolist/innertubex/models/YouTubeClient;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
 	public final fun addPlaylistToPlaylist (Lcom/metrolist/innertubex/models/YouTubeClient;Ljava/lang/String;Ljava/lang/String;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
@@ -1269,6 +1269,10 @@ public final synthetic class com/metrolist/innertubex/models/Context$User$$seria
 
 public final class com/metrolist/innertubex/models/Context$User$Companion {
 	public final fun serializer ()Lkotlinx/serialization/KSerializer;
+}
+
+public final class com/metrolist/innertubex/models/DefaultYouTubeLocale_desktopKt {
+	public static final fun defaultYouTubeLocale ()Lcom/metrolist/innertubex/models/YouTubeLocale;
 }
 
 public final class com/metrolist/innertubex/models/MusicResponsiveListItemRenderer {
