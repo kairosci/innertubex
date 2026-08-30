@@ -71,7 +71,6 @@ import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonPrimitive
-import java.util.Locale
 import kotlin.concurrent.atomics.AtomicReference
 import kotlin.concurrent.atomics.ExperimentalAtomicApi
 import kotlin.io.encoding.Base64
@@ -84,6 +83,7 @@ class InnerTube(
     val httpClient: HttpClient,
     private val retryDelay: suspend (kotlin.time.Duration) -> Unit = { delay(it) },
     private val logger: InnerTubeLogger = InnerTubeLogger.NONE,
+    initialSession: SessionSnapshot = SessionSnapshot(),
 ) {
     private companion object {
         private const val TAG = "InnerTube"
@@ -124,7 +124,9 @@ class InnerTube(
 
     /** Immutable request identity. Contains credentials and must not be serialized or logged directly. */
     data class SessionSnapshot(
-        val locale: YouTubeLocale = systemYouTubeLocale(),
+        val locale: YouTubeLocale =
+            com.metrolist.innertubex.models
+                .defaultYouTubeLocale(),
         val visitorData: String? = null,
         val dataSyncId: String? = null,
         val authUser: String = "0",
@@ -1650,9 +1652,6 @@ class InnerTubeHttpException(
     val operation: String,
     val status: HttpStatusCode,
 ) : IllegalStateException("$operation failed with HTTP ${status.value}")
-
-internal fun systemYouTubeLocale(locale: Locale = Locale.getDefault()): YouTubeLocale =
-    YouTubeLocale(gl = locale.country.uppercase(Locale.ROOT), hl = locale.toLanguageTag())
 
 private fun Throwable.logType(): String = this::class.simpleName ?: "Exception"
 
