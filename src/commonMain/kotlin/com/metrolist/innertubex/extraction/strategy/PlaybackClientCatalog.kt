@@ -719,8 +719,8 @@ object PlaybackClientCatalog : PlaybackClientCatalogView {
                 benchmarkContent = normalSongsOnlyContent().copy(explicit = CapabilitySupport.LIMITED),
                 evidence = setOf(SOURCE_ANDROID_BENCHMARK, SOURCE_ANDROID_SABR_BENCHMARK, SOURCE_YTDLP),
                 notes =
-                    "Passed both current normal cases and one of two explicit cases with 90-second playback and " +
-                        "bidirectional seeks. Automatic selection is limited to normal content.",
+                    "Passed both normal benchmark cases with 90-second playback, bidirectional seeks, and a " +
+                        "current complete-track probe. Automatic selection is limited to normal content.",
             ),
             manifest(
                 id = "TVHTML5_SABR",

@@ -75,6 +75,13 @@ class PlaybackClientStrategyTest {
                 ),
             )
 
+        assertEquals(
+            "WEB_REMIX_SABR",
+            result.candidates
+                .first()
+                .manifest
+                ?.id,
+        )
         val firstDirect = result.candidates.indexOfFirst { !it.client.useSabr }
         assertTrue(firstDirect > 0)
         assertTrue(result.candidates.take(firstDirect).all { it.client.useSabr })

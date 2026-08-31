@@ -157,7 +157,11 @@ private class SabrMediaStream(
             val activeContextTypes = mutableSetOf<Int>()
             var retainedContextBytes = 0L
 
-            while (!ended && playerTimeMs < expectedDurationMs(initialization)) {
+            while (
+                !ended &&
+                initialization?.endSegmentNumber?.let { lastSequenceNumber == it } != true &&
+                playerTimeMs < expectedDurationMs(initialization)
+            ) {
                 if (requestNumber >= MAX_REQUEST_COUNT) {
                     throw SabrProtocolException("SABR exceeded $MAX_REQUEST_COUNT requests")
                 }

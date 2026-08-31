@@ -272,6 +272,35 @@ class SabrAudioStreamTest {
         }
 
     @Test
+    fun finalSegmentCompletesWithoutEndOfTrackPart() =
+        runBlocking {
+            var requestCount = 0
+            val engine =
+                MockEngine {
+                    requestCount++
+                    respond(
+                        content =
+                            if (requestCount == 1) {
+                                initializationAndSegmentResponse(endSegmentNumber = 1, durationMs = 2_100)
+                            } else {
+                                finalSegmentResponse(includeEndOfTrack = false)
+                            },
+                        status = HttpStatusCode.OK,
+                        headers = headersOf(HttpHeaders.ContentType, "application/vnd.yt-ump"),
+                    )
+                }
+
+            val chunks =
+                SabrAudioStream(
+                    httpClient = HttpClient(engine),
+                    bootstrap = bootstrap().copy(durationMs = 2_100, contentLengthBytes = 10),
+                ).bytes().toList()
+
+            assertEquals(2, requestCount)
+            assertEquals(3, chunks.size)
+        }
+
+    @Test
     fun waitsForPlaybackBeforeExceedingServerReadaheadTarget() =
         runBlocking {
             val requestCount = MutableStateFlow(0)
@@ -524,9 +553,10 @@ class SabrAudioStreamTest {
     private fun initializationAndSegmentResponse(
         endSegmentNumber: Int,
         targetAudioReadaheadMs: Int? = null,
+        durationMs: Long = 2_000,
     ): ByteArray =
         (targetAudioReadaheadMs?.let { umpPart(UmpPartType.NEXT_REQUEST_POLICY, nextRequestPolicy(it)) } ?: byteArrayOf()) +
-            umpPart(UmpPartType.FORMAT_INITIALIZATION_METADATA, initialization(endSegmentNumber, durationMs = 2_000)) +
+            umpPart(UmpPartType.FORMAT_INITIALIZATION_METADATA, initialization(endSegmentNumber, durationMs = durationMs)) +
             umpPart(UmpPartType.MEDIA_HEADER, mediaHeader(headerId = 1, isInit = true, sequenceNumber = 0, contentLength = 4)) +
             umpPart(UmpPartType.MEDIA, byteArrayOf(1, 1, 2, 3, 4)) +
             umpPart(UmpPartType.MEDIA_END, byteArrayOf(1)) +
