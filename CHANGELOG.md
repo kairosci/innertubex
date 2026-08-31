@@ -6,6 +6,13 @@ that `0.x` releases may contain breaking API changes.
 
 ## [Unreleased]
 
+## [0.4.1] - 2026-08-31
+
+### Fixed
+
+- Transform `n` challenges on uploaded-media URLs hosted by YouTube so their
+  streams do not fail with HTTP 403.
+
 ## [0.4.0] - 2026-08-31
 
 ### Fixed
