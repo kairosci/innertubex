@@ -1017,10 +1017,12 @@ class YouTubeCipherService(
     private fun String.isApprovedMediaUrl(): Boolean {
         if (length !in 1..MAX_MEDIA_URL_LENGTH) return false
         val url = runCatching { Url(this) }.getOrNull() ?: return false
-        val isGoogleVideoHost = url.host == "googlevideo.com" || url.host.endsWith(".googlevideo.com")
+        val isMediaHost =
+            url.host == "googlevideo.com" || url.host.endsWith(".googlevideo.com") ||
+                url.host == "youtube.com" || url.host.endsWith(".youtube.com")
         return url.protocol.name == "https" &&
             url.port == 443 &&
-            isGoogleVideoHost &&
+            isMediaHost &&
             url.encodedPath == "/videoplayback" &&
             url.user == null &&
             url.password == null

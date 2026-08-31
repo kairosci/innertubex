@@ -37,7 +37,7 @@ class YouTubeCipherServiceTest {
             val format =
                 PlayerResponse.StreamingData.Format(
                     itag = 140,
-                    url = "https://example.googlevideo.com/videoplayback?expire=1&n=Qabc12XYZ&signature=abc",
+                    url = "https://rr1---sn-test.c.youtube.com/videoplayback?expire=1&n=Qabc12XYZ&signature=abc",
                     mimeType = "audio/mp4",
                 )
 
