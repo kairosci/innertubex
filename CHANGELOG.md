@@ -6,6 +6,16 @@ that `0.x` releases may contain breaking API changes.
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-08-31
+
+### Fixed
+
+- Complete SABR streams at their declared final segment when YouTube omits the
+  end-of-track marker.
+- Preserve WEB_REMIX as the preferred automatic SABR client.
+- Accept validated uploaded-media playback URLs and attach login cookies only
+  to uploaded-media requests.
+
 ## [0.3.0] - 2026-08-30
 
 ### Fixed
