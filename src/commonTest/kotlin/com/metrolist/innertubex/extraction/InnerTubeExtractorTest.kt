@@ -191,6 +191,33 @@ class InnerTubeExtractorTest {
         }
 
     @Test
+    fun uploadedYoutubeMediaUsesLoginCookie() =
+        runBlocking {
+            val response = DIRECT_RESPONSE.replace("https://r.googlevideo.com", "https://rr1.c.youtube.com")
+            val client = jsonClient(response)
+            val innerTube = InnerTube(client, retryDelay = {}).also { it.cookie = "SAPISID=test-cookie" }
+            val stream =
+                makeExtractor(client, innerTube, CountingParser(), WebRemixFallback)
+                    .extract("video", ContentHints(isUploaded = true))
+
+            assertNotNull(stream)
+            assertEquals("SAPISID=test-cookie", stream.headers["Cookie"])
+            client.close()
+        }
+
+    @Test
+    fun uploadedYoutubeMediaRejectsNonPlaybackPath() =
+        runBlocking {
+            val response = DIRECT_RESPONSE.replace("https://r.googlevideo.com/videoplayback", "https://rr1.c.youtube.com/watch")
+            val client = jsonClient(response)
+
+            assertFailsWith<StreamResolveException> {
+                extractor(client, WebRemixFallback).extract("video", ContentHints(isUploaded = true))
+            }
+            client.close()
+        }
+
+    @Test
     fun unapprovedVideoUrlIsRejected() =
         runBlocking {
             val response =
@@ -597,6 +624,10 @@ class InnerTubeExtractorTest {
 
     private object DirectFallback : com.metrolist.innertubex.extraction.strategy.ClientFallbackStrategy {
         override fun resolveClients(hints: ContentHints) = listOf(YouTubeClient.VISIONOS)
+    }
+
+    private object WebRemixFallback : com.metrolist.innertubex.extraction.strategy.ClientFallbackStrategy {
+        override fun resolveClients(hints: ContentHints) = listOf(YouTubeClient.WEB_REMIX)
     }
 
     private object IosFallback : com.metrolist.innertubex.extraction.strategy.ClientFallbackStrategy {
