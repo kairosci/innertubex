@@ -56,7 +56,14 @@ public class YtConfigParserImpl(
         pageKind: String,
         referer: String? = null,
     ): PlayerConfig {
-        val cookie = innerTube.cookie?.trim().takeIf { useLoginCookies && !it.isNullOrEmpty() }
+        val cookie =
+            innerTube.cookie
+                ?.takeIf { useLoginCookies }
+                ?.split(';')
+                ?.map { it.trim() }
+                ?.filter { it.isNotEmpty() && !it.startsWith("PREF=", ignoreCase = true) }
+                ?.joinToString("; ")
+                ?.takeIf { it.isNotEmpty() }
         val html =
             getText(Url(pageUrl), PAGE_MAX_BYTES) {
                 header(HttpHeaders.UserAgent, YouTubeClient.USER_AGENT_WEB)

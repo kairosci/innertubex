@@ -63,10 +63,30 @@ class YtConfigParserTest {
         }
 
     @Test
+    fun authenticatedRequestOmitsPreferenceCookie() =
+        runBlocking {
+            val client =
+                HttpClient(
+                    MockEngine { request ->
+                        assertEquals("SAPISID=session; SID=other", request.headers[HttpHeaders.Cookie])
+                        respond(
+                            "{\"PLAYER_JS_URL\":\"/s/player/auth/base.js\",\"STS\":20684}",
+                            HttpStatusCode.OK,
+                        )
+                    },
+                )
+            val innerTube = InnerTube(client).also { it.cookie = "SAPISID=session; PREF=app=m; SID=other" }
+
+            YtConfigParserImpl(client, innerTube).fetchConfig("video", useLoginCookies = true)
+
+            client.close()
+        }
+
+    @Test
     fun followsApprovedYouTubeRedirects() =
         runBlocking {
             val requestedHosts = mutableListOf<String>()
-            val cookie = "SAPISID=session; PREF=app=m"
+            val cookie = "SAPISID=session"
             val client =
                 HttpClient(
                     MockEngine { request ->
