@@ -543,6 +543,7 @@ class InnerTubeSessionTest {
                         assertEquals("start", request.headers["X-Goog-Upload-Command"])
                         assertEquals("resumable", request.headers["X-Goog-Upload-Protocol"])
                         assertEquals(content.size.toString(), request.headers["X-Goog-Upload-Header-Content-Length"])
+                        assertNull(request.headers["X-Goog-Upload-Header-Content-Type"])
                         assertTrue(request.body.contentType?.match(ContentType.Application.FormUrlEncoded) == true)
                         respond(
                             content = "",
@@ -558,7 +559,7 @@ class InnerTubeSessionTest {
                         assertEquals("session", request.url.parameters["upload_id"])
                         val body = request.body as OutgoingContent.ReadChannelContent
                         assertEquals(content.size.toLong(), body.contentLength)
-                        assertEquals(ContentType.Application.OctetStream, body.contentType)
+                        assertEquals(ContentType.Application.FormUrlEncoded, body.contentType)
                         assertEquals("upload, finalize", request.headers["X-Goog-Upload-Command"])
                         assertEquals("0", request.headers["X-Goog-Upload-Offset"])
                         assertTrue(content.contentEquals(body.readFrom().toByteArray()))
