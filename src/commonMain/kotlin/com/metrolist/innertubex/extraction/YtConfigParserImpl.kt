@@ -6,6 +6,7 @@ import com.metrolist.innertubex.cipher.RemotePlayerConfigStore
 import com.metrolist.innertubex.cipher.getTextWithoutRedirects
 import com.metrolist.innertubex.d
 import com.metrolist.innertubex.models.YouTubeClient
+import com.metrolist.innertubex.w
 import io.ktor.client.HttpClient
 import io.ktor.client.plugins.timeout
 import io.ktor.client.request.header
@@ -64,18 +65,33 @@ public class YtConfigParserImpl(
                 ?.filter { it.isNotEmpty() && !it.startsWith("PREF=", ignoreCase = true) }
                 ?.joinToString("; ")
                 ?.takeIf { it.isNotEmpty() }
-        val html =
+
+        suspend fun fetchHtml(requestCookie: String?) =
             getText(Url(pageUrl), PAGE_MAX_BYTES) {
                 header(HttpHeaders.UserAgent, YouTubeClient.USER_AGENT_WEB)
                 header(HttpHeaders.Accept, "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8")
                 referer?.let { header("Referer", it) }
-                cookie?.let { header(HttpHeaders.Cookie, it) }
+                requestCookie?.let { header(HttpHeaders.Cookie, it) }
                 header(HttpHeaders.AcceptLanguage, "${innerTube.locale.hl}-${innerTube.locale.gl},${innerTube.locale.hl};q=0.9")
                 timeout {
                     requestTimeoutMillis = PAGE_TIMEOUT_MS
                     connectTimeoutMillis = PAGE_TIMEOUT_MS
                     socketTimeoutMillis = PAGE_TIMEOUT_MS
                 }
+            }
+        val html =
+            try {
+                fetchHtml(cookie)
+            } catch (error: CancellationException) {
+                throw error
+            } catch (error: Exception) {
+                if (cookie == null) throw error
+                logger.w(
+                    TAG,
+                    "authenticated config page unavailable; retrying without cookies",
+                    details = mapOf("exceptionType" to (error::class.simpleName ?: "Exception")),
+                )
+                fetchHtml(null)
             }
         val playerUrl =
             extractPlayerUrl(html) ?: fetchIframePlayerUrl()
