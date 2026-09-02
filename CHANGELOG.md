@@ -6,6 +6,15 @@ that `0.x` releases may contain breaking API changes.
 
 ## [Unreleased]
 
+## [0.5.2] - 2026-09-02
+
+### Fixed
+
+- Restore the upload content type expected by YouTube Music so song uploads can
+  finalize successfully.
+- Retry authenticated player-config page failures without cookies.
+- Allow additional time for current large player scripts to evaluate.
+
 ## [0.4.1] - 2026-08-31
 
 ### Fixed
