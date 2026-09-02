@@ -83,6 +83,37 @@ class YtConfigParserTest {
         }
 
     @Test
+    fun authenticatedRedirectFailureRetriesWithoutCookies() =
+        runBlocking {
+            val cookies = mutableListOf<String?>()
+            val client =
+                HttpClient(
+                    MockEngine { request ->
+                        cookies += request.headers[HttpHeaders.Cookie]
+                        if (cookies.size == 1) {
+                            respond(
+                                "",
+                                HttpStatusCode.Found,
+                                headersOf(HttpHeaders.Location, "https://accounts.google.com/ServiceLogin"),
+                            )
+                        } else {
+                            respond(
+                                "{\"PLAYER_JS_URL\":\"/s/player/anonymous/base.js\",\"STS\":20684}",
+                                HttpStatusCode.OK,
+                            )
+                        }
+                    },
+                )
+            val innerTube = InnerTube(client).also { it.cookie = "SAPISID=session" }
+
+            val config = YtConfigParserImpl(client, innerTube).fetchConfig("video", useLoginCookies = true)
+
+            assertEquals("https://www.youtube.com/s/player/anonymous/base.js", config.playerUrl)
+            assertEquals(listOf("SAPISID=session", null), cookies)
+            client.close()
+        }
+
+    @Test
     fun followsApprovedYouTubeRedirects() =
         runBlocking {
             val requestedHosts = mutableListOf<String>()
