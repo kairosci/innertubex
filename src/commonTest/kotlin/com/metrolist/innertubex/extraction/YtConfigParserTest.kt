@@ -63,6 +63,114 @@ class YtConfigParserTest {
         }
 
     @Test
+    fun authenticatedRequestOmitsPreferenceCookie() =
+        runBlocking {
+            val client =
+                HttpClient(
+                    MockEngine { request ->
+                        assertEquals("SAPISID=session; SID=other", request.headers[HttpHeaders.Cookie])
+                        respond(
+                            "{\"PLAYER_JS_URL\":\"/s/player/auth/base.js\",\"STS\":20684}",
+                            HttpStatusCode.OK,
+                        )
+                    },
+                )
+            val innerTube = InnerTube(client).also { it.cookie = "SAPISID=session; PREF=app=m; SID=other" }
+
+            YtConfigParserImpl(client, innerTube).fetchConfig("video", useLoginCookies = true)
+
+            client.close()
+        }
+
+    @Test
+    fun authenticatedRedirectFailureRetriesWithoutCookies() =
+        runBlocking {
+            val cookies = mutableListOf<String?>()
+            val client =
+                HttpClient(
+                    MockEngine { request ->
+                        cookies += request.headers[HttpHeaders.Cookie]
+                        if (cookies.size == 1) {
+                            respond(
+                                "",
+                                HttpStatusCode.Found,
+                                headersOf(HttpHeaders.Location, "https://accounts.google.com/ServiceLogin"),
+                            )
+                        } else {
+                            respond(
+                                "{\"PLAYER_JS_URL\":\"/s/player/anonymous/base.js\",\"STS\":20684}",
+                                HttpStatusCode.OK,
+                            )
+                        }
+                    },
+                )
+            val innerTube = InnerTube(client).also { it.cookie = "SAPISID=session" }
+
+            val config = YtConfigParserImpl(client, innerTube).fetchConfig("video", useLoginCookies = true)
+
+            assertEquals("https://www.youtube.com/s/player/anonymous/base.js", config.playerUrl)
+            assertEquals(listOf("SAPISID=session", null), cookies)
+            client.close()
+        }
+
+    @Test
+    fun followsApprovedYouTubeRedirects() =
+        runBlocking {
+            val requestedHosts = mutableListOf<String>()
+            val cookie = "SAPISID=session"
+            val client =
+                HttpClient(
+                    MockEngine { request ->
+                        requestedHosts += request.url.host
+                        assertEquals(cookie, request.headers[HttpHeaders.Cookie])
+                        if (request.url.host == "www.youtube.com") {
+                            respond(
+                                "",
+                                HttpStatusCode.Found,
+                                headersOf(HttpHeaders.Location, "https://m.youtube.com/watch?v=video"),
+                            )
+                        } else {
+                            respond(
+                                "{\"PLAYER_JS_URL\":\"/s/player/mobile/base.js\",\"STS\":20684}",
+                                HttpStatusCode.OK,
+                            )
+                        }
+                    },
+                )
+            val innerTube = InnerTube(client).also { it.cookie = cookie }
+
+            val config = YtConfigParserImpl(client, innerTube).fetchConfig("video", useLoginCookies = true)
+
+            assertEquals("https://www.youtube.com/s/player/mobile/base.js", config.playerUrl)
+            assertEquals(listOf("www.youtube.com", "m.youtube.com"), requestedHosts)
+            client.close()
+        }
+
+    @Test
+    fun rejectsRedirectsOutsideApprovedYouTubeEndpoints() =
+        runBlocking {
+            listOf(
+                "https://example.com/watch?v=video",
+                "https://www.youtube.com/redirect?target=https://example.com",
+            ).forEach { location ->
+                var requestCount = 0
+                val client =
+                    HttpClient(
+                        MockEngine {
+                            requestCount++
+                            respond("", HttpStatusCode.Found, headersOf(HttpHeaders.Location, location))
+                        },
+                    )
+
+                assertFailsWith<IllegalStateException> {
+                    YtConfigParserImpl(client, InnerTube(client)).fetchConfig("video")
+                }
+                assertEquals(1, requestCount)
+                client.close()
+            }
+        }
+
+    @Test
     fun iframeFallbackPreservesCancellation() =
         runBlocking {
             val client =

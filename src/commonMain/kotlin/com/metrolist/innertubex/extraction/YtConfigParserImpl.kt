@@ -2,19 +2,19 @@ package com.metrolist.innertubex.extraction
 
 import com.metrolist.innertubex.InnerTube
 import com.metrolist.innertubex.InnerTubeLogger
-import com.metrolist.innertubex.bodyAsTextLimited
 import com.metrolist.innertubex.cipher.RemotePlayerConfigStore
+import com.metrolist.innertubex.cipher.getTextWithoutRedirects
 import com.metrolist.innertubex.d
 import com.metrolist.innertubex.models.YouTubeClient
+import com.metrolist.innertubex.w
 import io.ktor.client.HttpClient
-import io.ktor.client.plugins.HttpTimeout
 import io.ktor.client.plugins.timeout
-import io.ktor.client.request.get
 import io.ktor.client.request.header
-import io.ktor.client.statement.bodyAsChannel
 import io.ktor.http.HttpHeaders
+import io.ktor.http.URLBuilder
 import io.ktor.http.Url
 import io.ktor.http.isSuccess
+import io.ktor.http.takeFrom
 import kotlinx.coroutines.CancellationException
 
 public class YtConfigParserImpl(
@@ -57,19 +57,41 @@ public class YtConfigParserImpl(
         pageKind: String,
         referer: String? = null,
     ): PlayerConfig {
-        val cookie = innerTube.cookie?.trim().takeIf { useLoginCookies && !it.isNullOrEmpty() }
-        val html =
+        val cookie =
+            innerTube.cookie
+                ?.takeIf { useLoginCookies }
+                ?.split(';')
+                ?.map { it.trim() }
+                ?.filter { it.isNotEmpty() && !it.startsWith("PREF=", ignoreCase = true) }
+                ?.joinToString("; ")
+                ?.takeIf { it.isNotEmpty() }
+
+        suspend fun fetchHtml(requestCookie: String?) =
             getText(Url(pageUrl), PAGE_MAX_BYTES) {
                 header(HttpHeaders.UserAgent, YouTubeClient.USER_AGENT_WEB)
                 header(HttpHeaders.Accept, "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8")
                 referer?.let { header("Referer", it) }
-                cookie?.let { header(HttpHeaders.Cookie, it) }
+                requestCookie?.let { header(HttpHeaders.Cookie, it) }
                 header(HttpHeaders.AcceptLanguage, "${innerTube.locale.hl}-${innerTube.locale.gl},${innerTube.locale.hl};q=0.9")
                 timeout {
                     requestTimeoutMillis = PAGE_TIMEOUT_MS
                     connectTimeoutMillis = PAGE_TIMEOUT_MS
                     socketTimeoutMillis = PAGE_TIMEOUT_MS
                 }
+            }
+        val html =
+            try {
+                fetchHtml(cookie)
+            } catch (error: CancellationException) {
+                throw error
+            } catch (error: Exception) {
+                if (cookie == null) throw error
+                logger.w(
+                    TAG,
+                    "authenticated config page unavailable; retrying without cookies",
+                    details = mapOf("exceptionType" to (error::class.simpleName ?: "Exception")),
+                )
+                fetchHtml(null)
             }
         val playerUrl =
             extractPlayerUrl(html) ?: fetchIframePlayerUrl()
@@ -184,23 +206,34 @@ public class YtConfigParserImpl(
         maxBytes: Int,
         configure: io.ktor.client.request.HttpRequestBuilder.() -> Unit,
     ): String {
-        val client =
-            HttpClient(httpClient.engine) {
-                expectSuccess = false
-                followRedirects = false
-                install(HttpTimeout)
-            }
-        return try {
-            val response = client.get(url, configure)
-            if (!response.status.isSuccess()) {
-                response.bodyAsChannel().cancel(null)
-                error("HTTP ${response.status.value}")
-            }
-            response.bodyAsTextLimited(maxBytes)
-        } finally {
-            client.close()
+        var currentUrl = url
+        repeat(MAX_REDIRECTS + 1) { redirectCount ->
+            val response = httpClient.getTextWithoutRedirects(currentUrl, maxBytes, configure)
+            if (response.status.isSuccess()) return requireNotNull(response.body)
+
+            val redirectUrl =
+                response.headers[HttpHeaders.Location]
+                    ?.takeIf { response.status.value in REDIRECT_STATUS_CODES && redirectCount < MAX_REDIRECTS }
+                    ?.let { location -> runCatching { URLBuilder(currentUrl).takeFrom(location).build() }.getOrNull() }
+                    ?.takeIf(::approvedYouTubeUrl)
+                    ?: error("HTTP ${response.status.value}")
+            currentUrl = redirectUrl
         }
+        error("Too many redirects")
     }
+
+    private fun approvedYouTubeUrl(url: Url): Boolean =
+        url.protocol.name == "https" &&
+            url.port == 443 &&
+            approvedYouTubeHost(url.host) &&
+            url.user == null &&
+            url.password == null &&
+            (
+                url.encodedPath == "/watch" ||
+                    url.encodedPath == "/iframe_api" ||
+                    EMBED_PATH.matches(url.encodedPath) ||
+                    PLAYER_PATH.matches(url.encodedPath)
+            )
 
     private fun approvedYouTubeHost(host: String): Boolean =
         host == "youtube.com" || host.endsWith(".youtube.com") || host == "youtube-nocookie.com" || host.endsWith(".youtube-nocookie.com")
@@ -212,7 +245,10 @@ public class YtConfigParserImpl(
         private const val PAGE_MAX_BYTES = 4 * 1024 * 1024
         private const val PLAYER_JS_MAX_BYTES = 8 * 1024 * 1024
         private const val IFRAME_MAX_BYTES = 1 * 1024 * 1024
+        private const val MAX_REDIRECTS = 3
+        private val REDIRECT_STATUS_CODES = setOf(301, 302, 303, 307, 308)
         private val SAFE_VIDEO_ID = Regex("[A-Za-z0-9_-]{1,64}")
+        private val EMBED_PATH = Regex("/embed/[A-Za-z0-9_-]{1,64}")
         private val PLAYER_PATH = Regex("/s/player/[A-Za-z0-9_-]+/.+\\.js")
     }
 }

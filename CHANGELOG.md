@@ -6,6 +6,32 @@ that `0.x` releases may contain breaking API changes.
 
 ## [Unreleased]
 
+## [0.5.2] - 2026-09-02
+
+### Fixed
+
+- Restore the upload content type expected by YouTube Music so song uploads can
+  finalize successfully.
+- Retry authenticated player-config page failures without cookies.
+- Allow additional time for current large player scripts to evaluate.
+
+## [0.4.1] - 2026-08-31
+
+### Fixed
+
+- Transform `n` challenges on uploaded-media URLs hosted by YouTube so their
+  streams do not fail with HTTP 403.
+
+## [0.4.0] - 2026-08-31
+
+### Fixed
+
+- Complete SABR streams at their declared final segment when YouTube omits the
+  end-of-track marker.
+- Preserve WEB_REMIX as the preferred automatic SABR client.
+- Accept validated uploaded-media playback URLs and attach login cookies only
+  to uploaded-media requests.
+
 ## [0.3.0] - 2026-08-30
 
 ### Fixed

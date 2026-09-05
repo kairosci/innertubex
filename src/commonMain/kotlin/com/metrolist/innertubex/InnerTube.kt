@@ -71,7 +71,6 @@ import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonPrimitive
-import java.util.Locale
 import kotlin.concurrent.atomics.AtomicReference
 import kotlin.concurrent.atomics.ExperimentalAtomicApi
 import kotlin.io.encoding.Base64
@@ -124,7 +123,9 @@ class InnerTube(
 
     /** Immutable request identity. Contains credentials and must not be serialized or logged directly. */
     data class SessionSnapshot(
-        val locale: YouTubeLocale = systemYouTubeLocale(),
+        val locale: YouTubeLocale =
+            com.metrolist.innertubex.models
+                .defaultYouTubeLocale(),
         val visitorData: String? = null,
         val dataSyncId: String? = null,
         val authUser: String = "0",
@@ -1088,14 +1089,12 @@ class InnerTube(
         require(contentLength < MAX_UPLOAD_BYTES) { "Upload content must be smaller than 300 MiB" }
         val requestSession = sessionSnapshot()
         return withSessionBoundRequest(requestSession) {
-            val uploadContentType = fileName.uploadContentType()
             val startResponse =
                 executeRequest(operation = "uploadSong:start", retryTransientFailures = false, requireSuccess = false) {
                     httpClient.post("https://upload.youtube.com/upload/usermusic/http?authuser=${requestSession.authUser}") {
                         uploadAuthHeaders(requestSession)
                         header("X-Goog-Upload-Command", "start")
                         header("X-Goog-Upload-Header-Content-Length", contentLength.toString())
-                        header("X-Goog-Upload-Header-Content-Type", uploadContentType)
                         header("X-Goog-Upload-Protocol", "resumable")
                         setBody(
                             FormDataContent(
@@ -1126,7 +1125,7 @@ class InnerTube(
                     setBody(
                         object : OutgoingContent.ReadChannelContent() {
                             override val contentLength: Long = contentLength
-                            override val contentType: ContentType = ContentType.Application.OctetStream
+                            override val contentType: ContentType = ContentType.Application.FormUrlEncoded
 
                             override fun readFrom(): ByteReadChannel = content()
                         },
@@ -1149,16 +1148,6 @@ class InnerTube(
         }
         return url
     }
-
-    private fun String.uploadContentType(): String =
-        when (substringAfterLast('.', missingDelimiterValue = "").lowercase()) {
-            "mp3" -> "audio/mpeg"
-            "m4a" -> "audio/mp4"
-            "wma" -> "audio/x-ms-wma"
-            "flac" -> "audio/flac"
-            "ogg" -> "audio/ogg"
-            else -> ContentType.Application.OctetStream.toString()
-        }
 
     private fun Url.hasUserInfo(): Boolean = user != null || password != null
 
@@ -1662,9 +1651,6 @@ class InnerTubeHttpException(
     val operation: String,
     val status: HttpStatusCode,
 ) : IllegalStateException("$operation failed with HTTP ${status.value}")
-
-internal fun systemYouTubeLocale(locale: Locale = Locale.getDefault()): YouTubeLocale =
-    YouTubeLocale(gl = locale.country.uppercase(Locale.ROOT), hl = locale.toLanguageTag())
 
 private fun Throwable.logType(): String = this::class.simpleName ?: "Exception"
 

@@ -817,7 +817,7 @@ class InnerTubeExtractor internal constructor(
                     videoId = videoId,
                     audioUrl = hlsManifestUrl,
                     videoUrl = hlsManifestUrl,
-                    headers = buildHeaders(result.clientName, result.userAgent),
+                    headers = buildHeaders(result.clientName, result.userAgent, hlsManifestUrl, hints.isUploaded == true),
                     loudnessDb = response.playerConfig?.audioConfig?.loudnessDb,
                     expiresAt = null,
                     contentLengthBytes = null,
@@ -873,7 +873,7 @@ class InnerTubeExtractor internal constructor(
                 if (!directUrl.hasNParameter() && directVideoUrl?.hasNParameter() != true) {
                     val expireSeconds = extractExpire(directUrl)
                     val expiresAt = expireSeconds?.let { Instant.fromEpochSeconds(it) }
-                    val directHeaders = buildHeaders(result.clientName, result.userAgent)
+                    val directHeaders = buildHeaders(result.clientName, result.userAgent, directUrl, hints.isUploaded == true)
                     val contentLength =
                         resolveBoundedContentLength(
                             directFastPathCandidate.contentLength,
@@ -1059,7 +1059,7 @@ class InnerTubeExtractor internal constructor(
             }
             val expireSeconds = extractExpire(url)
             val expiresAt = expireSeconds?.let { Instant.fromEpochSeconds(it) }
-            val directHeaders = buildHeaders(result.clientName, result.userAgent)
+            val directHeaders = buildHeaders(result.clientName, result.userAgent, url, hints.isUploaded == true)
             val contentLength =
                 resolveBoundedContentLength(
                     audioFormat.contentLength,
@@ -1237,37 +1237,45 @@ class InnerTubeExtractor internal constructor(
     private fun buildHeaders(
         clientName: String,
         userAgent: String,
+        mediaUrl: String? = null,
+        includeLoginCookies: Boolean = false,
     ): Map<String, String> {
-        if (clientName == "ANDROID_VR" || clientName == "VISIONOS" || clientName == "TVHTML5_SIMPLY") {
-            return emptyMap()
-        }
         val headers = linkedMapOf<String, String>()
-        headers["User-Agent"] = userAgent
-        headers["Accept"] = "*/*"
-        headers["Accept-Language"] = "${innerTube.locale.hl}-${innerTube.locale.gl},${innerTube.locale.hl};q=0.9"
+        if (clientName != "ANDROID_VR" && clientName != "VISIONOS" && clientName != "TVHTML5_SIMPLY") {
+            headers["User-Agent"] = userAgent
+            headers["Accept"] = "*/*"
+            headers["Accept-Language"] = "${innerTube.locale.hl}-${innerTube.locale.gl},${innerTube.locale.hl};q=0.9"
 
-        when (clientName) {
-            "WEB_REMIX" -> {
-                headers["Referer"] = "https://music.youtube.com/"
-                headers["Origin"] = "https://music.youtube.com"
-            }
+            when (clientName) {
+                "WEB_REMIX" -> {
+                    headers["Referer"] = "https://music.youtube.com/"
+                    headers["Origin"] = "https://music.youtube.com"
+                }
 
-            "MWEB" -> {
-                headers["Referer"] = "https://m.youtube.com/"
-                headers["Origin"] = "https://m.youtube.com"
-            }
+                "MWEB" -> {
+                    headers["Referer"] = "https://m.youtube.com/"
+                    headers["Origin"] = "https://m.youtube.com"
+                }
 
-            "WEB_CREATOR" -> {
-                headers["Referer"] = "https://studio.youtube.com/"
-                headers["Origin"] = "https://studio.youtube.com"
-            }
+                "WEB_CREATOR" -> {
+                    headers["Referer"] = "https://studio.youtube.com/"
+                    headers["Origin"] = "https://studio.youtube.com"
+                }
 
-            "WEB",
-            "WEB_EMBEDDED_PLAYER",
-            -> {
-                headers["Referer"] = "https://www.youtube.com/"
-                headers["Origin"] = "https://www.youtube.com"
+                "WEB",
+                "WEB_EMBEDDED_PLAYER",
+                -> {
+                    headers["Referer"] = "https://www.youtube.com/"
+                    headers["Origin"] = "https://www.youtube.com"
+                }
             }
+        }
+        if (includeLoginCookies && mediaUrl?.let(::isAllowedMediaUrl) == true) {
+            innerTube
+                .sessionSnapshot()
+                .cookie
+                ?.takeIf(String::isNotBlank)
+                ?.let { headers["Cookie"] = it }
         }
         return headers
     }
@@ -1340,7 +1348,10 @@ class InnerTubeExtractor internal constructor(
         runCatching { Url(value) }.getOrNull()?.let {
             it.protocol == URLProtocol.HTTPS &&
                 it.port == 443 &&
-                (it.host == "googlevideo.com" || it.host.endsWith(".googlevideo.com")) &&
+                (
+                    it.host == "googlevideo.com" || it.host.endsWith(".googlevideo.com") ||
+                        it.host == "youtube.com" || it.host.endsWith(".youtube.com")
+                ) &&
                 it.encodedPath == "/videoplayback" && it.user == null && it.password == null
         } == true
 

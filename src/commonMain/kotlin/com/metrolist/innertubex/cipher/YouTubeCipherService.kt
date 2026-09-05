@@ -3,6 +3,7 @@ package com.metrolist.innertubex.cipher
 import com.metrolist.innertubex.InnerTubeLogger
 import com.metrolist.innertubex.d
 import com.metrolist.innertubex.models.response.PlayerResponse.StreamingData.Format
+import com.metrolist.innertubex.utils.decodeQueryComponent
 import com.metrolist.innertubex.w
 import io.ktor.client.HttpClient
 import io.ktor.client.request.header
@@ -936,7 +937,7 @@ class YouTubeCipherService(
         for (pair in pairs) {
             val parts = pair.split("=", limit = 2)
             if (parts.size == 2) {
-                params[parts[0]] = java.net.URLDecoder.decode(parts[1], "UTF-8")
+                params[parts[0]] = decodeQueryComponent(parts[1])
             }
         }
 
@@ -1017,10 +1018,12 @@ class YouTubeCipherService(
     private fun String.isApprovedMediaUrl(): Boolean {
         if (length !in 1..MAX_MEDIA_URL_LENGTH) return false
         val url = runCatching { Url(this) }.getOrNull() ?: return false
-        val isGoogleVideoHost = url.host == "googlevideo.com" || url.host.endsWith(".googlevideo.com")
+        val isMediaHost =
+            url.host == "googlevideo.com" || url.host.endsWith(".googlevideo.com") ||
+                url.host == "youtube.com" || url.host.endsWith(".youtube.com")
         return url.protocol.name == "https" &&
             url.port == 443 &&
-            isGoogleVideoHost &&
+            isMediaHost &&
             url.encodedPath == "/videoplayback" &&
             url.user == null &&
             url.password == null
