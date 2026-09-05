@@ -160,7 +160,9 @@ private class SabrMediaStream(
 
             while (
                 !ended &&
-                initialization?.endSegmentNumber?.let { lastSequenceNumber == it } != true &&
+                initialization?.endSegmentNumber?.let { end ->
+                    lastSequenceNumber?.let { sequence -> sequence >= end } == true
+                } != true &&
                 playerTimeMs < expectedDurationMs(initialization)
             ) {
                 if (requestNumber >= MAX_REQUEST_COUNT) {
